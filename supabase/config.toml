@@ -10,10 +10,11 @@ major_version = 17
 
 [auth]
 site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000/auth/callback"]
-enable_signup = true
+additional_redirect_urls = ["http://localhost:3000/**"]
+# Pilot: members are created by staff (docs/runbooks/add-fund.md), never by sign-up.
+enable_signup = false
 
 [auth.email]
-enable_signup = true
+enable_signup = false
 double_confirm_changes = true
 enable_confirmations = false

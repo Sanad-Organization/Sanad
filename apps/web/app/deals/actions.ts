@@ -1,19 +1,28 @@
 'use server';
 
 import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
-import { FUND_COOKIE, getSession, isUuid } from '@/lib/fund';
-import { requestLogger } from '@/lib/request';
+import { notFound, redirect } from 'next/navigation';
+import { flagOn } from '@/lib/flags-server';
+import { FUND_COOKIE, getSession } from '@/lib/fund';
+import { mayUseFund } from '@/lib/fund-select';
+import { startAction } from '@/lib/request';
 
 /** Switch the working fund. Accepted only if the database lists the user as a member. */
 export async function switchFund(form: FormData) {
-  const log = await requestLogger();
+  const act = await startAction('fund.switch');
   const wanted = form.get('fund');
   const session = await getSession();
-  if (!session) redirect('/login');
-  if (!isUuid(wanted) || !session.funds.some((f) => f.fundId === wanted)) {
-    log.warn('action.end', { action: 'fund.switch', outcome: 'refused', user_id: session.userId });
+  if (!session) {
+    act.end('no_session');
+    redirect('/login');
+  }
+  if (!mayUseFund(session.funds, wanted)) {
+    act.end('refused', { user_id: session.userId }, 'warn');
     redirect('/deals');
+  }
+  if (!(await flagOn('app-shell', wanted))) {
+    act.end('feature_off', { fund_id: wanted });
+    notFound();
   }
   (await cookies()).set(FUND_COOKIE, wanted, {
     httpOnly: true,
@@ -22,6 +31,6 @@ export async function switchFund(form: FormData) {
     path: '/',
     maxAge: 60 * 60 * 24 * 90,
   });
-  log.info('action.end', { action: 'fund.switch', outcome: 'ok', fund_id: wanted, user_id: session.userId });
+  act.end('ok', { fund_id: wanted, user_id: session.userId });
   redirect('/deals');
 }

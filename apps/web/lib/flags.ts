@@ -18,21 +18,32 @@ export type FlagResult = { on: boolean; reason: 'on' | 'off' | 'no_config' | 'ti
 export async function evaluateFlag(flag: FlagKey, fundId: string, cfg: FlagConfig): Promise<FlagResult> {
   if (!cfg.host || !cfg.projectKey || !fundId) return { on: false, reason: 'no_config' };
   const doFetch = cfg.fetch ?? fetch;
-  try {
-    const res = await doFetch(new URL('/flags?v=2', cfg.host), {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ api_key: cfg.projectKey, distinct_id: fundId, flag_keys_to_evaluate: [flag] }),
-      signal: AbortSignal.timeout(cfg.timeoutMs ?? FLAG_TIMEOUT_MS),
-      cache: 'no-store',
-    });
-    if (!res.ok) return { on: false, reason: 'error' };
-    const body: unknown = await res.json();
-    return readFlag(body, flag);
-  } catch (err) {
-    const name = (err as { name?: string })?.name;
-    return { on: false, reason: name === 'TimeoutError' || name === 'AbortError' ? 'timeout' : 'error' };
+  // One budget for the whole evaluation; a fast network error gets one retry inside it.
+  const signal = AbortSignal.timeout(cfg.timeoutMs ?? FLAG_TIMEOUT_MS);
+  let last: FlagResult = { on: false, reason: 'error' };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await doFetch(new URL('/flags?v=2', cfg.host), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ api_key: cfg.projectKey, distinct_id: fundId, flag_keys_to_evaluate: [flag] }),
+        signal,
+        cache: 'no-store',
+      });
+      if (res.status >= 500) {
+        last = { on: false, reason: 'error' };
+        continue;
+      }
+      if (!res.ok) return { on: false, reason: 'error' };
+      return readFlag(await res.json(), flag);
+    } catch (err) {
+      const name = (err as { name?: string })?.name;
+      if (name === 'TimeoutError' || name === 'AbortError' || signal.aborted) return { on: false, reason: 'timeout' };
+      if (name === 'SyntaxError') return { on: false, reason: 'bad_response' };
+      last = { on: false, reason: 'error' };
+    }
   }
+  return last;
 }
 
 export function readFlag(body: unknown, flag: string): FlagResult {

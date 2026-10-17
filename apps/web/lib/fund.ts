@@ -1,19 +1,13 @@
 import 'server-only';
 import { cookies } from 'next/headers';
 import { cache } from 'react';
-import type { MemberRole } from '@sanad/types';
+import { pickFund, toMemberships, type FundMembership } from './fund-select';
+import { errorFields } from './logger';
+import { requestLogger } from './request';
 import { supabaseServer } from './supabase/server';
 
 export const FUND_COOKIE = 'sanad_fund';
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export const isUuid = (v: unknown): v is string => typeof v === 'string' && UUID.test(v);
-
-export interface FundMembership {
-  fundId: string;
-  fundName: string;
-  role: MemberRole;
-}
+export type { FundMembership };
 
 export interface Session {
   userId: string;
@@ -21,11 +15,7 @@ export interface Session {
   current: FundMembership | null;
 }
 
-/**
- * The signed-in user, their funds (RLS returns only their own memberships'
- * funds) and the fund they are working in. The cookie only *selects* among
- * funds the database already returned; it never grants access.
- */
+/** The signed-in user, their funds (RLS returns only their own) and the fund they work in. */
 export const getSession = cache(async (): Promise<Session | null> => {
   const supabase = await supabaseServer();
   const { data: auth } = await supabase.auth.getUser();
@@ -37,14 +27,11 @@ export const getSession = cache(async (): Promise<Session | null> => {
     .select('fund_id, role, funds(name)')
     .eq('user_id', user.id)
     .order('created_at', { ascending: true });
-  if (error) throw Object.assign(new Error('memberships query failed'), { code: error.code });
-
-  const funds: FundMembership[] = (data ?? []).map((m) => ({
-    fundId: m.fund_id,
-    fundName: m.funds?.name ?? 'Fund',
-    role: m.role as MemberRole,
-  }));
-  const wanted = (await cookies()).get(FUND_COOKIE)?.value;
-  const current = funds.find((f) => f.fundId === wanted) ?? funds[0] ?? null;
+  if (error) {
+    (await requestLogger()).error('session.memberships_failed', { user_id: user.id, ...errorFields(error) });
+    throw Object.assign(new Error('memberships query failed'), { code: error.code });
+  }
+  const funds = toMemberships(data ?? []);
+  const current = pickFund(funds, (await cookies()).get(FUND_COOKIE)?.value);
   return { userId: user.id, funds, current };
 });

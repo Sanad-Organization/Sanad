@@ -52,6 +52,7 @@
 
   /* time */
   --duration-fast: 120ms;
+  --opacity-disabled: 0.6;
   --ease: cubic-bezier(0.2, 0, 0, 1);
 }
 

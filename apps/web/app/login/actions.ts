@@ -2,53 +2,59 @@
 
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
-import { siteUrl } from '@/lib/env';
 import { errorFields } from '@/lib/logger';
 import { safeNextPath } from '@/lib/redirect';
-import { requestLogger } from '@/lib/request';
+import { requestOrigin, startAction } from '@/lib/request';
 import { supabaseServer } from '@/lib/supabase/server';
 
-export type LoginState = { status: 'idle' | 'sent' | 'error'; message?: string };
+export type LoginState =
+  | { status: 'idle' }
+  | { status: 'sent' }
+  | { status: 'invalid'; message: string }
+  | { status: 'error'; message: string };
 
 const Email = z.email().max(254);
 
-function callbackUrl(next: string) {
-  return `${siteUrl()}/auth/callback?next=${encodeURIComponent(safeNextPath(next))}`;
-}
-
 export async function sendMagicLink(_prev: LoginState, form: FormData): Promise<LoginState> {
-  const log = await requestLogger();
-  log.info('action.start', { action: 'login.magic_link' });
+  const act = await startAction('login.magic_link');
   const parsed = Email.safeParse(String(form.get('email') ?? '').trim());
   if (!parsed.success) {
-    log.info('action.end', { action: 'login.magic_link', outcome: 'invalid' });
-    return { status: 'error', message: 'Enter a valid email address.' };
+    act.end('invalid');
+    return { status: 'invalid', message: 'Enter a valid email address.' };
   }
+  const next = safeNextPath(String(form.get('next') ?? ''));
   const supabase = await supabaseServer();
   const { error } = await supabase.auth.signInWithOtp({
     email: parsed.data,
-    options: { emailRedirectTo: callbackUrl(String(form.get('next') ?? '')) },
+    options: {
+      // Members are created by staff (runbook add-fund); sign-in never creates an account.
+      shouldCreateUser: false,
+      // The email template appends token_hash and type (runbook web-hosting), so the link
+      // works in any browser, not only the one that asked for it.
+      emailRedirectTo: `${await requestOrigin()}/auth/confirm?next=${encodeURIComponent(next)}`,
+    },
   });
   // Same answer whether or not the address has an account (no enumeration).
   if (error && error.status !== 422 && error.status !== 400) {
-    log.warn('action.end', { action: 'login.magic_link', outcome: 'error', ...errorFields(error) });
+    act.end('error', errorFields(error), 'warn');
     return { status: 'error', message: 'We couldn’t send the link. Try again in a moment.' };
   }
-  log.info('action.end', { action: 'login.magic_link', outcome: 'ok' });
+  act.end('ok');
   return { status: 'sent' };
 }
 
 export async function signInWithGoogle(form: FormData) {
-  const log = await requestLogger();
+  const act = await startAction('login.google');
+  const next = safeNextPath(String(form.get('next') ?? ''));
   const supabase = await supabaseServer();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: callbackUrl(String(form.get('next') ?? '')) },
+    options: { redirectTo: `${await requestOrigin()}/auth/callback?next=${encodeURIComponent(next)}` },
   });
   if (error || !data.url) {
-    log.warn('action.end', { action: 'login.google', outcome: 'error', ...errorFields(error) });
-    redirect('/login?error=google');
+    act.end('error', errorFields(error), 'warn');
+    redirect(`/login?error=google&next=${encodeURIComponent(next)}`);
   }
-  log.info('action.end', { action: 'login.google', outcome: 'redirect' });
+  act.end('redirect');
   redirect(data.url);
 }

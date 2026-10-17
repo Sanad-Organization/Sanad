@@ -1,12 +1,13 @@
 # Runbook — Add a pilot fund and its members
 
 **When:** a new design-partner fund joins (pilot only; replaced by TEAM-INVITES).
-**Who:** the owner (hosted action). **Why the order matters:** members can only be added after they have
-signed in once (their `auth.users` row must exist).
+**Who:** the owner (hosted action). **Why the order matters:** sign-ups are off (`web-hosting.md`), so each
+member's account is created by staff before the membership row can reference it.
 
 ## Steps
 
-1. Ask each member to open the app and sign in once (magic link). They will see "No fund yet".
+1. Supabase → Authentication → Users → **Add user** → "Create new user" with the member's email and
+   **Auto confirm** on (no password needed; they sign in by magic link or Google).
 2. In the Supabase SQL editor (production project), run, replacing placeholders:
 
    ```sql
@@ -29,5 +30,6 @@ signed in once (their `auth.users` row must exist).
 
 | Symptom | Meaning | Fix |
 | --- | --- | --- |
-| insert into memberships inserts 0 rows | the member hasn't signed in yet | step 1, then rerun |
+| insert into memberships inserts 0 rows | the member's account doesn't exist yet | step 1, then rerun |
+| member gets no email | sign-in never creates accounts | check step 1 used the exact address |
 | member sees another fund | **isolation incident** | page; follow `incident-isolation.md` |

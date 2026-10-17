@@ -36,7 +36,7 @@ a {
 }
 .s-button:disabled {
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: var(--opacity-disabled);
 }
 .s-button--primary {
   background: var(--color-accent);

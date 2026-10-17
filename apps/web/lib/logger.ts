@@ -23,12 +23,26 @@ const ALLOWED_FIELDS = new Set([
 ]);
 const MAX_STRING = 200;
 
+// Second line of defence: values that look like personal data or credentials
+// are replaced even in allowed fields.
+const REDACT: RegExp[] = [
+  /[^\s@]+@[^\s@]+\.[^\s@]+/, // email
+  /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/, // JWT
+  /\b(bearer|basic)\s+\S+/i, // auth header value
+  /\b(sb|phc|phx|sk|pk|ghp|gho|ghs|github_pat)_[A-Za-z0-9_]{8,}/, // key prefixes
+  /\?[^\s]*=/, // query string
+];
+
+function redactValue(v: string): string {
+  return REDACT.some((re) => re.test(v)) ? '[redacted]' : v.slice(0, MAX_STRING);
+}
+
 function clean(fields: LogFields): Record<string, string | number | boolean | null> {
   const out: Record<string, string | number | boolean | null> = {};
   for (const [k, v] of Object.entries(fields)) {
     if (!ALLOWED_FIELDS.has(k)) continue;
     if (v === null || typeof v === 'number' || typeof v === 'boolean') out[k] = v;
-    else if (typeof v === 'string') out[k] = v.slice(0, MAX_STRING);
+    else if (typeof v === 'string') out[k] = redactValue(v);
   }
   return out;
 }

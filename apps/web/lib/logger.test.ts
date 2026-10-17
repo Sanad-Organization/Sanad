@@ -44,3 +44,18 @@ test('errorFields keeps the class name and code, never the message', () => {
   const f = errorFields(err);
   assert.deepEqual(f, { error_name: 'TypeError', code: '42501' });
 });
+
+test('values shaped like PII or credentials are redacted even in allowed fields', () => {
+  const { lines, log } = capture();
+  const samples = [
+    'someone@example.test',
+    'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3OCJ9.abc',
+    'Bearer abcdef123456',
+    'sb_publishable_abcdefgh123',
+    '/auth/callback?code=abc',
+  ];
+  for (const reason of samples) log.warn('x', { reason });
+  for (const line of lines) assert.equal(line.reason, '[redacted]');
+  log.info('x', { reason: 'lease_lost' });
+  assert.equal(lines.at(-1)!.reason, 'lease_lost');
+});

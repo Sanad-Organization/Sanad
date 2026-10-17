@@ -71,3 +71,14 @@ test('fails closed on timeout, network error, non-200, bad JSON and missing conf
   assert.equal((await evaluateFlag('app-shell', FUND, { host: undefined, projectKey: 'k' })).reason, 'no_config');
   assert.equal((await evaluateFlag('app-shell', '', cfg(json({})))).reason, 'no_config');
 });
+
+test('a transient failure is retried once within the budget', async () => {
+  let calls = 0;
+  const flaky = (async () => {
+    calls++;
+    if (calls === 1) throw new TypeError('fetch failed');
+    return new Response(JSON.stringify({ flags: { 'app-shell': { enabled: true } } }));
+  }) as typeof fetch;
+  assert.deepEqual(await evaluateFlag('app-shell', FUND, cfg(flaky)), { on: true, reason: 'on' });
+  assert.equal(calls, 2);
+});

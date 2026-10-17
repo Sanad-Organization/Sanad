@@ -36,6 +36,7 @@ test('code reads only allow-listed environment variables', () => {
       assert.ok(allowed.has(name), `${path.relative(root, f)} reads ${name}, which is not in WEB_ENV`);
     }
     assert.ok(!/process\.env\[(?!['"])/.test(read(f)), `${path.relative(root, f)} reads env by computed key`);
+    assert.ok(!/\}\s*=\s*process\.env\b/.test(read(f)), `${path.relative(root, f)} destructures process.env`);
   }
 });
 
@@ -53,3 +54,23 @@ test('every env var turbo passes to the build is allow-listed', () => {
   const turbo = JSON.parse(read(path.join(root, 'turbo.json')));
   for (const name of turbo.tasks.build.env as string[]) assert.ok((WEB_ENV as readonly string[]).includes(name), name);
 });
+
+test('stylesheets use tokens: no raw colours or pixel sizes outside design-tokens', () => {
+  const dirs = [root, path.resolve(root, '../../packages/ui')];
+  const css = dirs.flatMap((d) => cssFiles(d));
+  assert.ok(css.length >= 2);
+  for (const f of css) {
+    const src = read(f).replace(/\/\*[\s\S]*?\*\//g, '');
+    assert.ok(!/#[0-9a-fA-F]{3,8}\b/.test(src), `${f}: hex colour`);
+    assert.ok(!/\b(rgb|rgba|hsl|hsla|oklch|oklab)\(/.test(src), `${f}: raw colour`);
+    assert.ok(!/\b\d+(\.\d+)?px\b/.test(src), `${f}: px value`);
+  }
+});
+
+function cssFiles(dir: string): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    if (SKIP.has(name)) return [];
+    const p = path.join(dir, name);
+    return statSync(p).isDirectory() ? cssFiles(p) : name.endsWith('.css') ? [p] : [];
+  });
+}
