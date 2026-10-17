@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+# Pre-commit: gitleaks on staged changes (if installed) + Sanad's key-shape scan.
+set -e
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --staged --redact --no-banner
+fi
+node .claude/hooks/secret-scan.mjs --staged

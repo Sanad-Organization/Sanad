@@ -1,0 +1,11 @@
+title = "sanad"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Synthetic test data and documentation examples"
+paths = [
+  '''supabase/tests/support/fixtures\.sql''',
+  '''\.claude/hooks/secret-scan(\.test)?\.mjs''',
+]

@@ -1,0 +1,31 @@
+{
+  "name": "sanad",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.13 <23"
+  },
+  "scripts": {
+    "prepare": "git config core.hooksPath .githooks || true",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "turbo run typecheck --force",
+    "test": "turbo run test --force",
+    "build": "turbo run build",
+    "guard:test": "node --test .claude/hooks/guard.test.mjs .claude/hooks/secret-scan.test.mjs",
+    "secrets:scan": "node .claude/hooks/secret-scan.mjs --all",
+    "db:test": "scripts/db-test.sh",
+    "db:canaries": "scripts/db-canaries.sh",
+    "gate": "node scripts/gate.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.12.0",
+    "globals": "17.13.0",
+    "prettier": "3.9.10",
+    "turbo": "2.11.7",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.2"
+  }
+}

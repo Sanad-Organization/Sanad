@@ -1,0 +1,11 @@
+node_modules
+pnpm-lock.yaml
+dist
+.next
+.turbo
+docs/*.pdf
+docs/private/engineering-bootstrap.md
+supabase
+services
+owner-only
+*.md

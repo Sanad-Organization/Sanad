@@ -1,0 +1,19 @@
+# Supabase CLI config for local development (`supabase start`) and the migrate workflow.
+project_id = "sanad"
+
+[api]
+schemas = ["public"]          # app_auth and app_jobs are never exposed
+extra_search_path = ["public", "extensions"]
+
+[db]
+major_version = 17
+
+[auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/callback"]
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false

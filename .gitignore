@@ -1,0 +1,34 @@
+# --- secrets: never committed (treat this repo as if it were public) ---------
+.env
+.env.*
+!.env.example
+.envrc
+*.pem
+*.key
+*.p12
+*.pfx
+*credentials*.json
+*service-account*.json
+.netrc
+.pgpass
+
+# --- owner-only material (designs, contracts, real evaluation data) ----------
+owner-only/
+# Confidential docs (architecture plan, concept brief, engineering contract).
+# The repo is public; the owner keeps these in the Project and copies them in locally.
+docs/private/
+
+# --- build and tool output ---------------------------------------------------
+node_modules/
+dist/
+.next/
+.turbo/
+coverage/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.vercel/
+.DS_Store
+*.log
+.claude/settings.local.json

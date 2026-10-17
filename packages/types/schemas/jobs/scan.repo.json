@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "connection_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "scanned_ref": {
+      "enum": ["head", "before_request"]
+    }
+  },
+  "required": ["connection_id", "scanned_ref"],
+  "additionalProperties": false,
+  "title": "scan.repo"
+}

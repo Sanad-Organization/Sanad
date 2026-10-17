@@ -1,0 +1,17 @@
+# The human-review tier. Replace @OWNER with the owner's GitHub handle (day 0).
+# A PR touching any of these needs the owner's review (ruleset: require code-owner review).
+/.github/               @OWNER
+/.githooks/             @OWNER
+/.claude/               @OWNER
+/.gitignore             @OWNER
+/.gitleaks.toml         @OWNER
+/CLAUDE.md              @OWNER
+/BACKLOG.md             @OWNER
+/docs/adr/              @OWNER
+/docs/private/engineering-bootstrap.md @OWNER
+/specs/                 @OWNER
+/supabase/              @OWNER
+/scripts/db-*.sh        @OWNER
+/packages/types/        @OWNER
+/services/              @OWNER
+/rules/                 @OWNER
