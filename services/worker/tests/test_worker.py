@@ -135,17 +135,89 @@ def test_kill_switch_claims_nothing(logs):
     assert lines.events("worker_paused")
 
 
-def test_deadline_fails_the_job_and_frees_the_slot(logs):
+def test_deadline_cancels_a_cooperative_handler_and_retries(logs):
     reg = Registry()
-    release = threading.Event()
-    reg.add("deal.collect", lambda job, ctx: release.wait(5))
-    store, w = make(logs, reg, deadlines={"deal.collect": 0}, heartbeat_every=0.01)
+    reg.add("deal.collect", lambda job, ctx: ctx.cancelled.wait(5))
+    store, w = make(logs, reg, deadlines={"deal.collect": 0}, heartbeat_every=0.01, cancel_grace=2)
     jid = store.enqueue("deal.collect", {"deal_id": DEAL})
     t0 = time.monotonic()
     w.run_once()
-    release.set()
     assert time.monotonic() - t0 < 2
     assert (store.rows[jid].status, store.rows[jid].last_error) == ("pending", "deadline")
+
+
+def test_stuck_handler_is_never_run_twice_at_once(logs):
+    reg = Registry()
+    release = threading.Event()
+    running = []
+
+    def stubborn(job, ctx):  # ignores cancel
+        running.append(job.id)
+        release.wait(5)
+
+    reg.add("deal.collect", stubborn)
+    store, w = make(logs, reg, deadlines={"deal.collect": 0}, heartbeat_every=0.01, cancel_grace=0.05)
+    jid = store.enqueue("deal.collect", {"deal_id": DEAL})
+    w.run_once()
+    assert store.rows[jid].status == "running"  # lease kept, not released for a re-run
+    store.make_ready()
+    assert w.run_once() == 0  # draining: claims nothing while the thread lives
+    assert running == [jid]
+    lines, _ = logs
+    assert lines.events("worker_draining")
+    assert lines.events("job_end")[-1]["outcome"] == "abandoned"
+    release.set()
+    time.sleep(0.05)
+    assert w.stuck_jobs() == 0
+
+
+def test_store_errors_are_logged_as_job_end_not_raised(logs):
+    from sanad_worker.store import StoreError
+
+    reg = Registry()
+    reg.add("deal.collect", lambda job, ctx: None)
+    store, w = make(logs, reg)
+    store.enqueue("deal.collect", {"deal_id": DEAL})
+
+    def down(job):
+        raise StoreError("jobs_complete", "unavailable")
+
+    store.complete = down
+    assert w.run_once() == 1
+    lines, _ = logs
+    end = lines.events("job_end")[-1]
+    assert (end["outcome"], end["code"], end["job_id"]) == ("store_error", "unavailable", 1)
+
+
+def test_a_heartbeat_blip_is_not_fatal(logs):
+    from sanad_worker.store import StoreError
+
+    reg = Registry()
+    reg.add("deal.collect", lambda job, ctx: time.sleep(0.08))
+    store, w = make(logs, reg, heartbeat_every=0.02)
+    calls = []
+
+    def flaky(job, s):
+        calls.append(1)
+        raise StoreError("jobs_heartbeat", "unavailable")
+
+    store.heartbeat = flaky
+    jid = store.enqueue("deal.collect", {"deal_id": DEAL})
+    w.run_once()
+    assert calls and store.rows[jid].status == "done"
+
+
+def test_permanent_error_codes_are_never_free_text(logs):
+    reg = Registry()
+
+    def refuse(job, ctx):
+        raise PermanentError("Founder Name said no")
+
+    reg.add("deal.collect", refuse)
+    store, w = make(logs, reg)
+    jid = store.enqueue("deal.collect", {"deal_id": DEAL})
+    w.run_once()
+    assert store.rows[jid].last_error == "invalid_code"
 
 
 def test_heartbeat_extends_the_lease_of_a_long_job(logs):

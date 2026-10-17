@@ -49,6 +49,11 @@ def main(argv: list[str] | None = None) -> int:
     except ConfigError as err:
         log.error("config_missing", name=err.name)
         return 1
+    from .handlers import schemas_dir
+
+    if not schemas_dir().is_dir():
+        log.error("config_missing", name="SANAD_SCHEMAS_DIR")
+        return 1
     init_sentry(cfg)
     store = RestStore(cfg.supabase_url, cfg.service_role_key)
 
@@ -72,7 +77,12 @@ def main(argv: list[str] | None = None) -> int:
         worker_id=cfg.worker_id,
         slots=cfg.slots,
         lease_seconds=cfg.lease_seconds,
-        killed=lambda: flag_on("worker-kill", cfg.posthog_host, cfg.posthog_project_key),
+        killed=lambda: flag_on(
+            "worker-kill",
+            cfg.posthog_host,
+            cfg.posthog_project_key,
+            on_error=lambda reason: log.warn("flag_unavailable", name="worker-kill", reason=reason),
+        ),
     )
     if cmd == "once":
         worker.run_once()

@@ -76,8 +76,9 @@ class RestStore:
         }
 
     def rpc(self, fn: str, args: dict[str, Any] | None = None, retries: int = 2) -> Any:
-        # Every jobs RPC is safe to repeat: complete/fail/heartbeat need the lease
-        # token, enqueue dedupes, claim's extra lease would simply expire.
+        # complete/fail/heartbeat are safe to repeat (they need the lease token).
+        # claim and enqueue-without-dedupe are called with retries=0: a lost
+        # response after a commit must not claim or insert twice.
         last: Exception | None = None
         for _ in range(retries + 1):
             try:
@@ -91,7 +92,9 @@ class RestStore:
             if res.status_code >= 400:
                 code = f"http_{res.status_code}"
                 try:
-                    code = str(res.json().get("code") or code)
+                    body = res.json()
+                    if isinstance(body, dict) and isinstance(body.get("code"), str):
+                        code = body["code"]
                 except ValueError:
                     pass
                 raise StoreError(fn, code)
@@ -118,7 +121,7 @@ class RestStore:
     def enqueue(self, kind, payload, fund_id=None, dedupe=None, delay_seconds=0) -> int:
         args = {"p_kind": kind, "p_payload": payload, "p_fund": fund_id, "p_dedupe": dedupe}
         args["p_delay_seconds"] = delay_seconds
-        return int(self.rpc("jobs_enqueue", args))
+        return int(self.rpc("jobs_enqueue", args, retries=0 if dedupe is None else 2))
 
 
 # ---------------------------------------------------------------------------

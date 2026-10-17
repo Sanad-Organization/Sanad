@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import threading
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cache
 from pathlib import Path
 from typing import Any
@@ -21,13 +23,20 @@ from jsonschema import Draft202012Validator
 from .log import Logger
 from .store import Job, Store
 
+CODE = re.compile(r"^[a-z0-9_]{1,64}$")
+
+
+def safe_code(code: object) -> str:
+    """Codes reach the queue and the logs: a fixed vocabulary shape, never free text."""
+    return code if isinstance(code, str) and CODE.match(code) else "invalid_code"
+
 
 class PermanentError(Exception):
     """Retrying cannot help (bad payload, unknown kind, CHECK refusal on replay)."""
 
     def __init__(self, code: str) -> None:
         super().__init__(code)
-        self.code = code
+        self.code = safe_code(code)
 
 
 @dataclass
@@ -35,6 +44,10 @@ class Context:
     store: Store
     log: Logger
     heartbeat: Callable[[], bool]
+    # Set when the job passed its deadline or lost its lease. Long handlers check
+    # it between steps and stop; external resources (a scan sandbox) also need
+    # their own TTL, because a thread can't be killed.
+    cancelled: threading.Event = field(default_factory=threading.Event)
 
 
 Handler = Callable[[Job, Context], None]

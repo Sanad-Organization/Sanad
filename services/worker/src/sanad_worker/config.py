@@ -54,6 +54,11 @@ class Config:
     def from_env(cls, env: dict[str, str] | None = None) -> Config:
         e = dict(os.environ if env is None else env)
         url = _require(e, "SUPABASE_URL")
+        environment = e.get("SANAD_ENV", "local")
+        if environment != "local":
+            # Outside local runs the kill switch must work: no flag config, no start.
+            _require(e, "POSTHOG_HOST")
+            _require(e, "POSTHOG_PROJECT_KEY")
         if not url.startswith("https://") and not url.startswith("http://localhost"):
             raise ConfigError("SUPABASE_URL")
         return cls(
@@ -66,5 +71,5 @@ class Config:
             posthog_host=e.get("POSTHOG_HOST") or None,
             posthog_project_key=e.get("POSTHOG_PROJECT_KEY") or None,
             sentry_dsn=e.get("SENTRY_DSN") or None,
-            environment=e.get("SANAD_ENV", "local"),
+            environment=environment,
         )

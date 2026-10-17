@@ -6,16 +6,37 @@ evaluated for the fixed distinct id ``sanad-worker`` (no fund data is sent).
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import httpx
 
 TIMEOUT_SECONDS = 1.5
 GLOBAL_ID = "sanad-worker"
 
 
-def flag_on(flag: str, host: str | None, project_key: str | None, client: httpx.Client | None = None) -> bool:
+_shared: httpx.Client | None = None
+
+
+def _client() -> httpx.Client:
+    global _shared
+    if _shared is None:
+        _shared = httpx.Client(timeout=TIMEOUT_SECONDS)
+    return _shared
+
+
+def flag_on(
+    flag: str,
+    host: str | None,
+    project_key: str | None,
+    client: httpx.Client | None = None,
+    on_error: Callable[[str], None] | None = None,
+) -> bool:
+    """``on_error`` is told why an evaluation fell back to off (``no_config``, ``http``, ``network``)."""
+    report = on_error or (lambda _r: None)
     if not host or not project_key:
+        report("no_config")
         return False
-    c = client or httpx.Client(timeout=TIMEOUT_SECONDS)
+    c = client or _client()
     try:
         res = c.post(
             f"{host.rstrip('/')}/flags?v=2",
@@ -23,9 +44,11 @@ def flag_on(flag: str, host: str | None, project_key: str | None, client: httpx.
             timeout=TIMEOUT_SECONDS,
         )
         if res.status_code != 200:
+            report("http")
             return False
         body = res.json()
     except (httpx.HTTPError, ValueError):
+        report("network")
         return False
     return read_flag(body, flag)
 

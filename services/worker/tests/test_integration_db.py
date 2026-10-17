@@ -66,12 +66,13 @@ class SqlStore:
 def db():
     dsn = f"dbname={DB}"
     admin = psycopg.connect(dsn, autocommit=True)
-    admin.execute("drop table if exists public.worker_it_results")
-    admin.execute("create table public.worker_it_results (deal_id text primary key, job_id bigint not null)")
-    admin.execute("grant insert, select on public.worker_it_results to service_role")
+    # Results live in a test-only schema, never in public (the catalogue sweep checks public).
+    admin.execute("drop schema if exists worker_it cascade")
+    admin.execute("create schema worker_it")
+    admin.execute("create table worker_it.results (deal_id text primary key, job_id bigint not null)")
     admin.execute("delete from app_jobs.jobs where kind = 'deal.collect'")
     yield dsn, admin
-    admin.execute("drop table if exists public.worker_it_results")
+    admin.execute("drop schema if exists worker_it cascade")
     admin.close()
 
 
@@ -82,7 +83,7 @@ def test_killed_worker_lease_expires_and_a_second_worker_finishes_once(db, logs)
 
     def write_result(job, _ctx):  # idempotent by natural key
         results.execute(
-            "insert into public.worker_it_results values (%s, %s) on conflict (deal_id) do nothing",
+            "insert into worker_it.results values (%s, %s) on conflict (deal_id) do nothing",
             (job.payload["deal_id"], job.id),
         )
 
@@ -108,7 +109,7 @@ def test_killed_worker_lease_expires_and_a_second_worker_finishes_once(db, logs)
     ).fetchone()
     assert (status, attempts) == ("done", 2)
     assert "lease expired" in last_error
-    assert admin.execute("select count(*) from public.worker_it_results").fetchone()[0] == 1
+    assert admin.execute("select count(*) from worker_it.results").fetchone()[0] == 1
     # A's stale lease can no longer complete or fail it.
     assert b.complete(job_a) is False
     assert b.fail(job_a, "late") == "lease_lost"

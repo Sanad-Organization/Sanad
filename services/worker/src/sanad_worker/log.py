@@ -9,6 +9,7 @@ handler enqueues follow-up work and passes its trace on).
 from __future__ import annotations
 
 import json
+import re
 import sys
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -38,6 +39,7 @@ ALLOWED_FIELDS = frozenset(
     }
 )
 MAX_STRING = 200
+_CODE = re.compile(r"^[A-Za-z0-9_]{1,64}$")  # Postgres codes, http_503, no_handler
 
 Sink = Callable[[str], None]
 
@@ -64,7 +66,7 @@ def error_fields(err: BaseException) -> dict[str, Any]:
     out: dict[str, Any] = {"error_name": type(err).__name__}
     code = getattr(err, "code", None)
     if isinstance(code, str):
-        out["code"] = code[:MAX_STRING]
+        out["code"] = code if _CODE.match(code) else "invalid_code"
     return out
 
 

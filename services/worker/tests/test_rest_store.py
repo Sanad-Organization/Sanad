@@ -54,3 +54,21 @@ def test_claim_is_not_retried():
     with pytest.raises(StoreError):
         store(h).claim("w", 1, 60)
     assert len(calls) == 1
+
+
+def test_enqueue_without_dedupe_is_not_retried():
+    calls = []
+
+    def h(r):
+        calls.append(1)
+        return httpx.Response(503)
+
+    with pytest.raises(StoreError):
+        store(h).enqueue("ops.sweep", {})
+    assert len(calls) == 1
+
+
+def test_a_list_error_body_does_not_crash():
+    with pytest.raises(StoreError) as e:
+        store(lambda r: httpx.Response(400, json=[1, 2])).rpc("jobs_enqueue", {})
+    assert e.value.code == "http_400"

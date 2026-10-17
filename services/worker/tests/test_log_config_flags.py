@@ -70,3 +70,31 @@ def test_flags_fail_closed():
         flag_on("worker-kill", "https://f.test", "k", client(lambda r: httpx.Response(200, text="<html>")))
         is False
     )
+
+
+def test_outside_local_the_kill_switch_config_is_required():
+    env = {
+        "SUPABASE_URL": "https://x.supabase.co",
+        "SUPABASE_SERVICE_ROLE_KEY": "k",
+        "SANAD_ENV": "production",
+    }
+    with pytest.raises(ConfigError) as e:
+        Config.from_env(env)
+    assert e.value.name == "POSTHOG_HOST"
+    Config.from_env({**env, "POSTHOG_HOST": "https://f.test", "POSTHOG_PROJECT_KEY": "phc_x"})
+
+
+def test_flag_errors_are_reported():
+    reasons = []
+    flag_on("worker-kill", None, None, on_error=reasons.append)
+    flag_on(
+        "worker-kill", "https://f.test", "k", client(lambda r: httpx.Response(502)), on_error=reasons.append
+    )
+    assert reasons == ["no_config", "http"]
+
+
+def test_error_fields_reject_free_text_codes():
+    class E(Exception):
+        code = "contains a sentence with data"
+
+    assert error_fields(E())["code"] == "invalid_code"
