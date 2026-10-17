@@ -1,0 +1,163 @@
+/* Base components. Values come from @sanad/design-tokens only. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: var(--leading);
+}
+:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-width);
+}
+a {
+  color: var(--color-accent);
+}
+
+.s-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease);
+}
+.s-button:disabled {
+  cursor: not-allowed;
+  opacity: var(--opacity-disabled);
+}
+.s-button--primary {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+}
+.s-button--secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+.s-button--ghost {
+  background: transparent;
+  color: var(--color-text);
+}
+
+.s-field {
+  display: grid;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+.s-field__label {
+  font-weight: var(--weight-medium);
+}
+.s-field__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+.s-field__error {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+}
+.s-input {
+  min-height: var(--control-height);
+  width: 100%;
+  padding: 0 var(--space-3);
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+.s-input[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+.s-card {
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+}
+
+.s-badge {
+  display: inline-block;
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+.s-badge--success {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+.s-badge--danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.s-empty {
+  padding: var(--space-12) var(--space-6);
+  border: var(--border-width) dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+.s-empty__title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+}
+.s-empty__body {
+  color: var(--color-text-muted);
+}
+
+.s-table-wrap {
+  overflow-x: auto;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.s-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-surface);
+}
+.s-table th,
+.s-table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: var(--border-width) solid var(--color-border);
+  text-align: start;
+}
+.s-table th {
+  font-weight: var(--weight-bold);
+  font-size: var(--text-sm);
+}
+
+.s-notice {
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-4);
+}
+.s-notice--danger {
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+.s-notice--success {
+  background: var(--color-success-bg);
+  border-color: var(--color-success);
+  color: var(--color-success);
+}

@@ -9,8 +9,8 @@ Status: `queued` · `in-progress` · `blocked` (reason required) · `done` · `a
 | --- | --------------- | --------------------------------- | ---------- | ------ | --------------------------------------------------------------------- |
 | 1   | HARNESS         | specs/SPEC-harness.md             | —          | done | On main, CI green, ruleset set (2026-10-17) |
 | 2   | DB-SPINE        | specs/SPEC-db-spine.md            | #1         | done | Live on hosted project, schema verified (2026-10-17) |
-| 3   | APP-SHELL       | specs/SPEC-app-shell.md           | #2         | queued | Day 1                                                                 |
-| 4   | WORKER-CORE     | specs/SPEC-worker-core.md         | #2         | queued | Day 1–2; parallel with #3                                             |
+| 3   | APP-SHELL       | specs/SPEC-app-shell.md           | #2         | in-progress | Slice 1 in review (feat/app-shell); slice 2 next |
+| 4   | WORKER-CORE     | specs/SPEC-worker-core.md         | #2         | in-progress | Slice 1 in review (feat/worker-core); slice 2 next |
 | 5   | COLLECT-WEB     | specs/SPEC-collect-web.md         | #4         | queued | Day 2–3; website, news, outside-in check, deck files, embeddings      |
 | 6   | GITHUB-ACCESS   | specs/SPEC-github-access.md       | #3, #4     | queued | Day 3; needs the GitHub App registered (owner, day 0)                 |
 | 7   | SCAN-SANDBOX    | specs/SPEC-scan-sandbox.md        | #6         | queued | Day 3–5; full adversarial review                                      |
