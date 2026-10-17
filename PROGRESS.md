@@ -6,7 +6,13 @@
 > identifiers, no real company, founder or fund names.
 
 **Last updated:** 2026-10-17
-**Latest (2026-10-17, published):** The starter is pushed to the public repository as one fresh commit
+**Latest (2026-10-17, database live):** The hosted Supabase project `sanad` (owner's organisation,
+Frankfurt) has all five migrations; the last three went through the `migrate` workflow with the owner's
+approval. The live schema matches the tested local schema: constraints, policies, table grants and
+function permissions are identical; all functions except one match exactly (the pgvector search function
+and index print without the `extensions.` prefix on Supabase, a cosmetic difference). CI is green on `main`
+after the macOS guard fix (#1).
+**Earlier (2026-10-17, published):** The starter is pushed to the public repository as one fresh commit
 (owner chose public, ADR 0007). The confidential plan, brief and engineering contract are kept out of git
 in `docs/private/`. The database is not yet applied to a hosted project: the Supabase connection needs the
 owner to re-authorise it, and the Sanad project must be created in the owner's own organisation.
@@ -28,8 +34,8 @@ and analysis, claims, scoring, deal room, agent, and pilot hardening.
 
 | Track | Status | Notes |
 | --- | --- | --- |
-| HARNESS | 🟡 In progress | Pushed to main 2026-10-17; waiting on CODEOWNERS handle, ruleset, first green CI (owner) |
-| DB-SPINE | 🟡 In progress | On main (in the starter commit); green locally; not yet applied to a hosted project |
+| HARNESS | ✅ Done | On main; CI green; ruleset, CODEOWNERS and production environment set (owner, 2026-10-17) |
+| DB-SPINE | ✅ Done | Live on the hosted project; schema verified against the local test database |
 | Day-0 accounts | ⏳ Held | Owner: `docs/runbooks/day0-accounts.md` |
 | Everything else | ⏳ Queued | See BACKLOG |
 
@@ -73,6 +79,11 @@ and analysis, claims, scoring, deal room, agent, and pilot hardening.
 
 ### Carried
 
+- **Advisor results (2026-10-17), accepted:** security WARN ×9 = the nine reviewed user RPCs (by design,
+  ADR 0002); INFO ×2 = `app_jobs` tables with RLS and no policies (by design, ADR 0006).
+- **Advisor follow-up:** 30 composite foreign keys have no covering index (INFO). Add the indexes in one
+  migration before real data volume (proposed backlog item DB-FK-INDEXES; owner to queue).
+
 - Whether any pilot fund needs in-region storage (not Frankfurt).
 - Bright Data and X cost per deal: measure in week 1.
 - Storage bucket policies arrive with COLLECT-WEB (own migration, tests, canary).
@@ -84,9 +95,6 @@ no separate DB-SPINE PR.
 
 ### 0. First thing next session
 
-1. Owner: CODEOWNERS handle, ruleset on `main`, Supabase project + `production` environment secrets
-   (`day0-accounts.md`). Copy the three confidential docs into `docs/private/`.
-2. Agent: confirm CI is green on `main`; apply the migrations to the hosted project only through the
-   `migrate` workflow (owner approves the run); run the catalogue sweep queries read-only against it and
-   record the advisor results here. Then mark HARNESS and DB-SPINE done.
-3. Agent: APP-SHELL and WORKER-CORE as separate PRs against `main`.
+1. Owner: copy the three confidential docs into `docs/private/` locally.
+2. Agent: APP-SHELL and WORKER-CORE as separate PRs against `main` (the next queued tasks).
+3. Owner: the remaining day-0 accounts (Vercel, Render, Fly, GitHub App, X, Bright Data, model keys).

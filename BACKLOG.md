@@ -7,8 +7,8 @@ Status: `queued` · `in-progress` · `blocked` (reason required) · `done` · `a
 
 | #   | Task ID         | Spec                              | Depends on | Status | Notes                                                                 |
 | --- | --------------- | --------------------------------- | ---------- | ------ | --------------------------------------------------------------------- |
-| 1   | HARNESS         | specs/SPEC-harness.md             | —          | in-progress | Pushed 2026-10-17; owner: ruleset, CODEOWNERS, secrets |
-| 2   | DB-SPINE        | specs/SPEC-db-spine.md            | #1         | in-progress | On main; apply to hosted DB via migrate workflow |
+| 1   | HARNESS         | specs/SPEC-harness.md             | —          | done | On main, CI green, ruleset set (2026-10-17) |
+| 2   | DB-SPINE        | specs/SPEC-db-spine.md            | #1         | done | Live on hosted project, schema verified (2026-10-17) |
 | 3   | APP-SHELL       | specs/SPEC-app-shell.md           | #2         | queued | Day 1                                                                 |
 | 4   | WORKER-CORE     | specs/SPEC-worker-core.md         | #2         | queued | Day 1–2; parallel with #3                                             |
 | 5   | COLLECT-WEB     | specs/SPEC-collect-web.md         | #4         | queued | Day 2–3; website, news, outside-in check, deck files, embeddings      |
