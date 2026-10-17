@@ -1,0 +1,19 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "env": [
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "NEXT_PUBLIC_SITE_URL",
+        "POSTHOG_HOST",
+        "POSTHOG_PROJECT_KEY",
+        "SENTRY_DSN",
+        "VERCEL_ENV",
+        "VERCEL_URL",
+        "VERCEL_GIT_COMMIT_SHA"
+      ]
+    }
+  }
+}
