@@ -352,7 +352,10 @@ function realish(p) {
 
 export function makeCtx(root, cwd) {
   const r = realish(path.resolve(root));
-  return { root: r, cwd: realish(path.resolve(cwd || r)), tmp: realish(tmpdir()) };
+  // The OS temp folder, plus /tmp where it is a different place (macOS: $TMPDIR is /var/folders/…).
+  const tmp = realish(tmpdir());
+  const tmps = [...new Set([tmp, realish('/tmp')])];
+  return { root: r, cwd: realish(path.resolve(cwd || r)), tmp, tmps };
 }
 
 /** Resolve an argument to an absolute path, or null when it can't be resolved. */
@@ -369,6 +372,7 @@ export function resolveArg(arg, ctx) {
 }
 
 const inside = (p, dir) => p === dir || p.startsWith(dir + path.sep);
+const inTemp = (p, ctx) => ctx.tmps.some((t) => inside(p, t));
 const rel = (p, ctx) => path.relative(ctx.root, p).split(path.sep).join('/');
 
 export function isOwnerOnly(p, ctx) {
@@ -609,14 +613,14 @@ function checkPaths(t, redirects, inputs, ctx) {
       block(`modifying a guardrail path (${rel(p, ctx)}) is denied; propose a patch`);
     }
     if (DELETE_VERBS.has(b)) {
-      if (!inside(p, ctx.root) && !inside(p, ctx.tmp)) block(`deleting outside the repo and temp (${p}) is denied`);
+      if (!inside(p, ctx.root) && !inTemp(p, ctx)) block(`deleting outside the repo and temp (${p}) is denied`);
       if (p === ctx.root || inside(p, path.join(ctx.root, '.git'))) block('deleting the repository or .git is denied');
     }
   }
   if (b === 'find' && t.some((a) => ['-delete', '-exec', '-execdir', '-ok', '-okdir'].includes(a))) {
     const root = t[1] && !t[1].startsWith('-') ? t[1] : '.';
     const p = resolveArg(root, ctx);
-    if (p === null || (!inside(p, ctx.root) && !inside(p, ctx.tmp)))
+    if (p === null || (!inside(p, ctx.root) && !inTemp(p, ctx)))
       block('find -delete/-exec outside the repo and temp is denied');
     if (inside(p, path.join(ctx.root, '.git')) && t.includes('-delete')) block('find -delete inside .git is denied');
     const i = t.findIndex((a) => ['-exec', '-execdir', '-ok', '-okdir'].includes(a));
