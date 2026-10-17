@@ -3,6 +3,7 @@
 // Runs every check CI runs; stops at the first failure and says which.
 // Database tests run when supabase/ changed against origin/main, or with --db.
 import { execSync, spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 
 const steps = [
   ['format', 'pnpm', ['format:check']],
@@ -12,6 +13,15 @@ const steps = [
   ['guard tests', 'pnpm', ['guard:test']],
   ['secret scan', 'pnpm', ['secrets:scan']],
 ];
+
+// Python worker: lint, format and unit tests (the DB integration test runs when
+// PGHOST and SANAD_TEST_DB point at a local database built by db-test.sh).
+if (existsSync('services/worker/pyproject.toml')) {
+  const uv = ['--project', 'services/worker'];
+  steps.push(['worker lint', 'uv', ['run', ...uv, 'ruff', 'check', 'services/worker']]);
+  steps.push(['worker format', 'uv', ['run', ...uv, 'ruff', 'format', '--check', 'services/worker']]);
+  steps.push(['worker tests', 'uv', ['run', ...uv, 'pytest', 'services/worker/tests']]);
+}
 
 let dbChanged = process.argv.includes('--db');
 if (!dbChanged) {
