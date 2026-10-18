@@ -40,7 +40,8 @@ do $$ declare bad text; begin
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.prosecdef and has_function_privilege('authenticated', p.oid, 'execute')
      and p.proname not in ('create_deal','set_deal_status','request_rescore','override_finding','approve_score',
-                           'set_question_status','log_agent_turn','request_repo_access','set_profile_status');
+                           'set_question_status','log_agent_turn','request_repo_access','set_profile_status',
+                           'register_file');
   if bad is not null then raise exception 'CRITICAL: unreviewed definer RPCs open to users: %', bad; end if;
 
   -- 7. Every definer function pins search_path to ''.
@@ -62,6 +63,17 @@ do $$ declare bad text; begin
    where n.nspname = 'public' and c.relkind = 'r' and c.relname <> 'funds'
      and not exists (select 1 from pg_attribute a where a.attrelid = c.oid and a.attname = 'fund_id' and not a.attisdropped);
   if bad is not null then raise exception 'CRITICAL: public tables without fund_id: %', bad; end if;
+
+  -- 10. Storage: the only client policies on storage.objects are the reviewed
+  --     deal-files read and insert; no client may update or delete an object.
+  select string_agg(policyname || ':' || cmd, ', ') into bad
+    from pg_policies where schemaname = 'storage' and tablename = 'objects'
+     and (policyname, cmd) not in (('deal_files_member_read','SELECT'), ('deal_files_member_insert','INSERT'));
+  if bad is not null then raise exception 'CRITICAL: unreviewed storage policies: %', bad; end if;
+
+  -- 11. No bucket is public.
+  select string_agg(id, ', ') into bad from storage.buckets where public;
+  if bad is not null then raise exception 'CRITICAL: public storage buckets: %', bad; end if;
 
   raise notice 'PASS: catalogue sweep';
 end $$;
