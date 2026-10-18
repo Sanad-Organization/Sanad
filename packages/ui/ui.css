@@ -34,6 +34,9 @@ a {
   cursor: pointer;
   transition: background-color var(--duration-fast) var(--ease);
 }
+a.s-button {
+  text-decoration: none;
+}
 .s-button:disabled {
   cursor: not-allowed;
   opacity: var(--opacity-disabled);
@@ -79,6 +82,11 @@ a {
   background: var(--color-surface);
   color: var(--color-text);
   font: inherit;
+}
+.s-input--multiline {
+  min-height: calc(var(--control-height) * 3);
+  padding: var(--space-2) var(--space-3);
+  resize: vertical;
 }
 .s-input[aria-invalid='true'] {
   border-color: var(--color-danger);
