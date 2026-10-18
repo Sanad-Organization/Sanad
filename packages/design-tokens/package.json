@@ -4,5 +4,9 @@
   "private": true,
   "exports": {
     "./tokens.css": "./tokens.css"
+  },
+  "type": "module",
+  "scripts": {
+    "test": "node --test tokens.test.ts"
   }
 }

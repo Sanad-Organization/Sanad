@@ -82,6 +82,11 @@ and analysis, claims, scoring, deal room, agent, and pilot hardening.
 - **Ingress service** takes the GitHub webhook and scan results so the web app holds no service key (ADR 0009).
 - **Pilot membership** is added by staff (runbook); self-serve invites are `TEAM-INVITES`.
 - **Repository is public;** confidential docs live in git-ignored `docs/private/` (owner, 2026-10-17; ADR 0007).
+- **Design system approved** (owner, 2026-10-18): IBM Plex (Latin, Arabic, Mono, self-hosted), Sanad green
+  accent, blue = verified, amber = risk / founder claim, red = red flag; status always word + glyph; borders,
+  not shadows; mobile-first with breakpoints 30/48/64rem and 44px touch targets. The design system is kept as
+  a private artifact in the owner's account (link in the Project, not in this public repo); `packages/design-tokens`
+  (with its contrast test) and `packages/ui` implement it and are the source of truth in code.
 - **Sign-ups are closed.** Sign-in never creates an account; staff create members (runbook add-fund).
   Personal data moves up a tier, so this follows the security review rather than the earlier
   "sign in once" runbook (agent, Tier A from CLAUDE.md; 2026-10-17).
@@ -119,20 +124,22 @@ and analysis, claims, scoring, deal room, agent, and pilot hardening.
   need a seeded test Supabase project with Auth (DECISION NEEDED, Tier B: a separate "sanad-test" project
   vs Supabase branching). Fund selection and the switcher's refusal are unit-tested; RLS isolation is
   covered by the SQL tests.
+- **Design follow-ups:** a typed `tokens.ts` mirror with a parity test (bootstrap §12.1); axe checks with the
+  E2E harness; stacked tables drop native table semantics in VoiceOver (accepted for now; add ARIA roles if
+  testing shows a problem).
 - **CSP header** before the first real tenant (bootstrap §18.4).
 - **Rate limiting / bot check on the sign-in action** (bootstrap §18.4); Supabase's limits apply meanwhile.
 - **Worker CI job:** `.github` changes are owner-applied; the patch adding the `worker` job (ruff, pytest,
   DB integration test) is in the PR description of `feat/worker-core`.
-- **SQL follow-up (DB-only PR):** `jobs_claim` appends " | lease expired" to `last_error` without
-  truncating, so a 2000-character error would break the CHECK and stop every claim. Fix with
-  `left(…, 2000)` in a new migration (with DB-FK-INDEXES if queued together).
+- **SQL follow-up — done-in-review (#5):** the `jobs_claim` reaper truncates `last_error` with
+  `left(…, 2000)` (migration `20261018090000`). Owner runs `migrate` after merge.
 - Sentry does not see job failures (they are handled); decide whether permanent failures should raise an
   event.
 
 - **Advisor results (2026-10-17), accepted:** security WARN ×9 = the nine reviewed user RPCs (by design,
   ADR 0002); INFO ×2 = `app_jobs` tables with RLS and no policies (by design, ADR 0006).
-- **Advisor follow-up:** 30 composite foreign keys have no covering index (INFO). Add the indexes in one
-  migration before real data volume (proposed backlog item DB-FK-INDEXES; owner to queue).
+- **DB-FK-INDEXES — done-in-review (#5):** 30 covering indexes, one per foreign key, plus a catalogue
+  test so a future foreign key without an index fails CI (queued by the owner, 2026-10-18).
 
 - Whether any pilot fund needs in-region storage (not Frankfurt).
 - Bright Data and X cost per deal: measure in week 1.

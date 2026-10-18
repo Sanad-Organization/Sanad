@@ -1,8 +1,13 @@
-/* Base components. Values come from @sanad/design-tokens only. */
+/* Sanad base components (approved design system, 2026-10-18). Values come from @sanad/design-tokens only.
+   Mobile-first; breakpoints 30rem / 48rem / 64rem are written literally (variables don't work in queries). */
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 body {
   margin: 0;
@@ -10,16 +15,46 @@ body {
   color: var(--color-text);
   font-family: var(--font-sans);
   font-size: var(--text-md);
-  line-height: var(--leading);
+  line-height: var(--leading-md);
+  overflow-wrap: break-word;
 }
 :focus-visible {
   outline: var(--focus-width) solid var(--color-focus);
   outline-offset: var(--focus-width);
 }
 a {
-  color: var(--color-accent);
+  color: var(--color-link);
+}
+:lang(ar),
+[dir='rtl'] {
+  font-family: var(--font-arabic);
+  line-height: var(--leading-ar);
+}
+/* Letter-spacing and uppercase break Arabic joining: never apply them to Arabic. */
+:lang(ar) .s-badge,
+:lang(ar) .s-table th,
+:lang(ar) .s-table td::before,
+[dir='rtl'] .s-badge,
+[dir='rtl'] .s-table th,
+[dir='rtl'] .s-table td::before {
+  letter-spacing: 0;
+  text-transform: none;
+}
+.visually-hidden {
+  position: absolute;
+  width: var(--border-width);
+  height: var(--border-width);
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.s-mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-mono);
+  font-variant-numeric: tabular-nums;
 }
 
+/* Button */
 .s-button {
   display: inline-flex;
   align-items: center;
@@ -40,7 +75,7 @@ a {
 }
 .s-button--primary {
   background: var(--color-accent);
-  color: var(--color-accent-text);
+  color: var(--color-on-accent);
 }
 .s-button--secondary {
   background: var(--color-surface);
@@ -51,7 +86,21 @@ a {
   background: transparent;
   color: var(--color-text);
 }
+.s-button--danger {
+  background: var(--color-surface);
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+.s-button--block-sm {
+  width: 100%;
+}
+@media (min-width: 30rem) {
+  .s-button--block-sm {
+    width: auto;
+  }
+}
 
+/* Field */
 .s-field {
   display: grid;
   gap: var(--space-1);
@@ -64,11 +113,13 @@ a {
   margin: 0;
   color: var(--color-text-muted);
   font-size: var(--text-sm);
+  line-height: var(--leading-sm);
 }
 .s-field__error {
   margin: 0;
   color: var(--color-danger);
   font-size: var(--text-sm);
+  line-height: var(--leading-sm);
 }
 .s-input {
   min-height: var(--control-height);
@@ -82,73 +133,224 @@ a {
 }
 .s-input[aria-invalid='true'] {
   border-color: var(--color-danger);
+  /* a second pixel of edge without shifting the layout: not colour alone */
+  box-shadow: inset 0 0 0 var(--border-width) var(--color-danger);
 }
 
+/* Card */
 .s-card {
   background: var(--color-surface);
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: var(--space-6);
+  padding: var(--space-4);
+}
+@media (min-width: 30rem) {
+  .s-card {
+    padding: var(--space-6);
+  }
 }
 
+/* Badge (neutral status, e.g. deal status) and FindingBadge */
 .s-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   padding: 0 var(--space-2);
   border: var(--border-width) solid var(--color-border-strong);
   border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
   font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
+  line-height: var(--leading-sm);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  white-space: nowrap;
 }
-.s-badge--success {
-  background: var(--color-success-bg);
-  color: var(--color-success);
-  border-color: var(--color-success);
+.s-badge__glyph {
+  font-family: var(--font-mono);
+  letter-spacing: 0;
 }
-.s-badge--danger {
+.s-badge--success,
+.s-badge--strength {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.s-badge--verified {
+  background: var(--color-verified-bg);
+  color: var(--color-verified);
+  border-color: var(--color-verified);
+}
+.s-badge--contradicted,
+.s-badge--risk {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border-color: var(--color-warning);
+}
+.s-badge--danger,
+.s-badge--red-flag {
   background: var(--color-danger-bg);
   color: var(--color-danger);
   border-color: var(--color-danger);
 }
 
+/* SourceTier */
+.s-tier {
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  line-height: var(--leading-sm);
+  overflow: hidden;
+}
+.s-tier__n {
+  padding: 0 var(--space-2);
+  font-family: var(--font-mono);
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  border-inline-end: var(--border-width) solid var(--color-border-strong);
+}
+.s-tier__label {
+  padding: 0 var(--space-2);
+  color: var(--color-text-muted);
+}
+.s-tier--1 .s-tier__n {
+  background: var(--color-verified-bg);
+  color: var(--color-verified);
+}
+.s-tier--4 .s-tier__n {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+/* Empty state */
 .s-empty {
-  padding: var(--space-12) var(--space-6);
+  padding: var(--space-8) var(--space-4);
   border: var(--border-width) dashed var(--color-border-strong);
   border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
   text-align: center;
+}
+@media (min-width: 30rem) {
+  .s-empty {
+    padding: var(--space-12) var(--space-6);
+  }
 }
 .s-empty__title {
   margin: 0 0 var(--space-2);
   font-size: var(--text-lg);
+  line-height: var(--leading-lg);
 }
 .s-empty__body {
   color: var(--color-text-muted);
 }
 
+/* Table: becomes stacked cards when its container is narrower than 30rem (cells need data-label). */
+/* container-type needs a definite-width parent (a block, or a flex/grid item with min-width: 0). */
 .s-table-wrap {
+  container-type: inline-size;
   overflow-x: auto;
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-md);
+  background: var(--color-surface);
 }
 .s-table {
   width: 100%;
   border-collapse: collapse;
-  background: var(--color-surface);
+  font-variant-numeric: tabular-nums;
 }
 .s-table th,
 .s-table td {
   padding: var(--space-3) var(--space-4);
   border-bottom: var(--border-width) solid var(--color-border);
   text-align: start;
+  vertical-align: middle;
+}
+.s-table tr:last-child td {
+  border-bottom: 0;
 }
 .s-table th {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
   font-weight: var(--weight-bold);
-  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+.s-table td.s-num {
+  text-align: end;
+  font-family: var(--font-mono);
+  font-size: var(--text-mono);
+}
+.s-table a {
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+}
+.s-table a:hover {
+  text-decoration: underline;
+}
+@container (max-width: 30rem) {
+  .s-table thead {
+    position: absolute;
+    width: var(--border-width);
+    height: var(--border-width);
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .s-table,
+  .s-table tbody,
+  .s-table tr,
+  .s-table td {
+    display: block;
+    width: 100%;
+  }
+  .s-table tr {
+    padding: var(--space-3) var(--space-4);
+    border-bottom: var(--border-width) solid var(--color-border);
+  }
+  .s-table tr:last-child {
+    border-bottom: 0;
+  }
+  /* The label floats to the start; the cell's content (any number of inline children) flows to the end. */
+  .s-table td,
+  .s-table td.s-num {
+    display: flow-root;
+    padding: var(--space-1) 0;
+    border: 0;
+    text-align: end;
+  }
+  .s-table td::before {
+    content: attr(data-label);
+    float: inline-start;
+    margin-inline-end: var(--space-4);
+    color: var(--color-text-muted);
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    line-height: var(--leading-sm);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    text-align: start;
+  }
+  .s-table td:first-child {
+    display: block;
+    padding-bottom: var(--space-2);
+    text-align: start;
+  }
+  .s-table td:first-child::before {
+    content: none;
+  }
 }
 
+/* Notice */
 .s-notice {
   padding: var(--space-3) var(--space-4);
   border: var(--border-width) solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   margin-bottom: var(--space-4);
 }
 .s-notice--danger {
@@ -157,7 +359,20 @@ a {
   color: var(--color-danger);
 }
 .s-notice--success {
-  background: var(--color-success-bg);
-  border-color: var(--color-success);
-  color: var(--color-success);
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+/* Touch: everything tappable is at least --target-min. */
+@media (pointer: coarse) {
+  .s-button,
+  .s-input {
+    min-height: var(--target-min);
+  }
+  .s-table a {
+    display: inline-block;
+    min-height: var(--target-min);
+    line-height: var(--target-min);
+  }
 }
