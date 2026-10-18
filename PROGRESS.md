@@ -104,16 +104,15 @@ and analysis, claims, scoring, deal room, agent, and pilot hardening.
 - **Rate limiting / bot check on the sign-in action** (bootstrap §18.4); Supabase's limits apply meanwhile.
 - **Worker CI job:** `.github` changes are owner-applied; the patch adding the `worker` job (ruff, pytest,
   DB integration test) is in the PR description of `feat/worker-core`.
-- **SQL follow-up (DB-only PR):** `jobs_claim` appends " | lease expired" to `last_error` without
-  truncating, so a 2000-character error would break the CHECK and stop every claim. Fix with
-  `left(…, 2000)` in a new migration (with DB-FK-INDEXES if queued together).
+- **SQL follow-up — done-in-review (#5):** the `jobs_claim` reaper truncates `last_error` with
+  `left(…, 2000)` (migration `20261018090000`). Owner runs `migrate` after merge.
 - Sentry does not see job failures (they are handled); decide whether permanent failures should raise an
   event.
 
 - **Advisor results (2026-10-17), accepted:** security WARN ×9 = the nine reviewed user RPCs (by design,
   ADR 0002); INFO ×2 = `app_jobs` tables with RLS and no policies (by design, ADR 0006).
-- **Advisor follow-up:** 30 composite foreign keys have no covering index (INFO). Add the indexes in one
-  migration before real data volume (proposed backlog item DB-FK-INDEXES; owner to queue).
+- **DB-FK-INDEXES — done-in-review (#5):** 30 covering indexes, one per foreign key, plus a catalogue
+  test so a future foreign key without an index fails CI (queued by the owner, 2026-10-18).
 
 - Whether any pilot fund needs in-region storage (not Frankfurt).
 - Bright Data and X cost per deal: measure in week 1.
