@@ -1,40 +1,67 @@
 /*
- * The only place a colour, size or timing is written (CLAUDE.md "Design system").
- * Structural contrast: surfaces are separated by borders and weight, not by colour alone.
- * Every text/background pair below meets WCAG AA (4.5:1) in both schemes.
+ * Sanad design tokens — the only place a colour, size or timing is written
+ * (CLAUDE.md "Design system"). Source of truth: the approved Sanad design
+ * system (owner, 2026-10-18). Each variable here is a design-system token
+ * with a --color- / --text- prefix: design-system `text` = --color-text,
+ * `space-4` = --space-4, and so on. Every text/background pair meets WCAG AA
+ * (4.5:1) in both themes; focus and control edges meet 3:1.
+ *
+ * Breakpoints (CSS variables can't be used in queries; write these literally):
+ *   bp-sm 30rem (480px) · bp-md 48rem (768px) · bp-lg 64rem (1024px)
  */
 :root {
   color-scheme: light dark;
 
   /* colour */
-  --color-bg: #f7f7f5;
+  --color-bg: #f5f6f3;
   --color-surface: #ffffff;
-  --color-border: #c9c9c4;
-  --color-border-strong: #6b6b66;
-  --color-text: #1a1a18;
-  --color-text-muted: #55554f;
-  --color-accent: #0b5d4b;
-  --color-accent-text: #ffffff;
+  --color-surface-sunken: #ebede8;
+  --color-border: #c9cdc5;
+  --color-border-strong: #6a7166;
+  --color-text: #151c17;
+  --color-text-muted: #4c554e;
+  --color-accent: #0b5a48;
+  --color-on-accent: #ffffff;
+  --color-accent-soft: #dcefe8;
+  --color-verified: #1c4d9a;
+  --color-verified-bg: #e6edf8;
+  --color-warning: #874f00;
+  --color-warning-bg: #faefd9;
   --color-danger: #a1261b;
-  --color-danger-bg: #fbeceb;
-  --color-success: #1d6b2f;
-  --color-success-bg: #e9f5ec;
+  --color-danger-bg: #fae9e7;
   --color-focus: #1f4fd1;
+  --color-link: var(--color-accent);
+  /* aliases kept for existing components */
+  --color-accent-text: var(--color-on-accent);
+  --color-success: var(--color-accent);
+  --color-success-bg: var(--color-accent-soft);
 
   /* type */
-  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Arabic', sans-serif;
-  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, monospace;
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-md: 1rem;
-  --text-lg: 1.25rem;
-  --text-xl: 1.5rem;
+  --font-sans: 'IBM Plex Sans', 'IBM Plex Sans Arabic', system-ui, 'Segoe UI', sans-serif;
+  --font-arabic: 'IBM Plex Sans Arabic', 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  --text-xs: 0.75rem; /* label */
+  --text-mono: 0.8125rem; /* mono */
+  --text-sm: 0.875rem; /* small */
+  --text-md: 1rem; /* body */
+  --text-lg: 1.25rem; /* heading */
+  --text-xl: 1.75rem; /* title */
+  --text-2xl: 2.5rem; /* display */
+  --leading-xs: 1rem;
+  --leading-sm: 1.25rem;
+  --leading-md: 1.5rem;
+  --leading-ar: 1.625rem;
+  --leading-lg: 1.75rem;
+  --leading-xl: 2.125rem;
+  --leading-2xl: 2.75rem;
+  --leading: 1.5;
   --weight-regular: 400;
   --weight-medium: 500;
-  --weight-bold: 650;
-  --leading: 1.5;
+  --weight-bold: 600;
+  --tracking-label: 0.04em;
+  --tracking-display: -0.01em;
 
-  /* space and size */
+  /* space */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -42,34 +69,44 @@
   --space-6: 1.5rem;
   --space-8: 2rem;
   --space-12: 3rem;
+
+  /* shape and size */
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
   --border-width: 1px;
+  --border-width-strong: 2px;
   --focus-width: 2px;
+  --control-height: 2.5rem;
+  --target-min: 2.75rem;
   --content-max: 72rem;
   --form-max: 28rem;
-  --control-height: 2.5rem;
+  --phone-max: 22.5rem;
 
-  /* time */
+  /* time and state */
   --duration-fast: 120ms;
-  --opacity-disabled: 0.6;
   --ease: cubic-bezier(0.2, 0, 0, 1);
+  --opacity-disabled: 0.6;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #121211;
-    --color-surface: #1c1c1a;
-    --color-border: #4a4a45;
-    --color-border-strong: #9a9a92;
-    --color-text: #f1f1ec;
-    --color-text-muted: #b4b4ac;
-    --color-accent: #5fc4a8;
-    --color-accent-text: #0b1a16;
-    --color-danger: #ff8a7e;
-    --color-danger-bg: #3a1714;
-    --color-success: #7fd391;
-    --color-success-bg: #14301b;
+    --color-bg: #101412;
+    --color-surface: #181d1a;
+    --color-surface-sunken: #0b0e0c;
+    --color-border: #39423c;
+    --color-border-strong: #8a948c;
+    --color-text: #edf0eb;
+    --color-text-muted: #a9b2aa;
+    --color-accent: #5ec3a5;
+    --color-on-accent: #04201a;
+    --color-accent-soft: #123128;
+    --color-verified: #93b5ff;
+    --color-verified-bg: #16213a;
+    --color-warning: #efb45a;
+    --color-warning-bg: #2c2110;
+    --color-danger: #ff8d81;
+    --color-danger-bg: #381613;
     --color-focus: #8fb0ff;
   }
 }

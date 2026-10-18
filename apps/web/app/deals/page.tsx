@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
-import { Badge, Button, ButtonLink, EmptyState, Notice, Table } from '@sanad/ui';
+import { Badge, Button, EmptyState, Notice, Table } from '@sanad/ui';
 import { Shell } from '@/components/shell';
 import type { DealStatus } from '@sanad/types';
 import { roundLabel } from '@/lib/deal-form';
@@ -49,7 +49,14 @@ export default async function DealsPage() {
     <Shell session={session}>
       <div className="page-head">
         <h1 className="page-title">Deals</h1>
-        {canCreate ? <ButtonLink href="/deals/new">New deal</ButtonLink> : null}
+        {canCreate ? (
+          // A GET form so the action is a real Button and still works without JavaScript.
+          <form action="/deals/new" method="get" className="page-action">
+            <Button type="submit" blockOnPhone>
+              New deal
+            </Button>
+          </form>
+        ) : null}
       </div>
       {deals === null ? (
         <Notice tone="danger">We couldn&apos;t load your deals. Try again in a moment.</Notice>
@@ -73,14 +80,14 @@ export default async function DealsPage() {
           <tbody>
             {deals.map((d) => (
               <tr key={d.id}>
-                <td>{d.companies?.name ?? '—'}</td>
-                <td>{roundLabel(d.round)}</td>
-                <td>{d.companies?.sector ?? '—'}</td>
-                <td>{d.companies?.country ?? '—'}</td>
-                <td>
+                <td data-label="Company">{d.companies?.name ?? '—'}</td>
+                <td data-label="Round">{roundLabel(d.round)}</td>
+                <td data-label="Sector">{d.companies?.sector ?? '—'}</td>
+                <td data-label="Country">{d.companies?.country ?? '—'}</td>
+                <td data-label="Status">
                   <Badge>{STATUS_LABEL[d.status]}</Badge>
                 </td>
-                <td>{dateFormat.format(new Date(d.created_at))}</td>
+                <td data-label="Added">{dateFormat.format(new Date(d.created_at))}</td>
               </tr>
             ))}
           </tbody>

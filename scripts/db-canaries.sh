@@ -22,6 +22,7 @@ F1="$T/20261013090100_jobs_queue.test.sql"
 F2="$T/20261013090200_deals_evidence.test.sql"
 F3="$T/20261013090300_repo_scans.test.sql"
 F4="$T/20261013090400_social.test.sql"
+F5="$T/20261018090000_reaper_truncate_fk_indexes.test.sql"
 FS="$T/zz_catalogue_sweep.test.sql"
 
 failures=0
@@ -96,6 +97,10 @@ canary "code_issues gains a snippet column" \
 canary "mentions enrich-only trigger" \
   "drop trigger mentions_enrich_only on public.mentions" "$F4" \
   "create trigger mentions_enrich_only before update or delete on public.mentions for each row execute function app_auth.mentions_enrich_only()"
+
+canary "foreign key without a covering index" \
+  "drop index public.sources_deal_id_fund_id_idx" "$F5" \
+  "create index sources_deal_id_fund_id_idx on public.sources (deal_id, fund_id)"
 
 canary "definer RPC opened to anon" \
   "grant execute on function public.create_deal(uuid, text, text, text, text, text, text[]) to anon" "$FS" \
