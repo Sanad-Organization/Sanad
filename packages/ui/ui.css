@@ -16,7 +16,7 @@ body {
   font-family: var(--font-sans);
   font-size: var(--text-md);
   line-height: var(--leading-md);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 :focus-visible {
   outline: var(--focus-width) solid var(--color-focus);
@@ -25,10 +25,20 @@ body {
 a {
   color: var(--color-link);
 }
-[lang='ar'],
+:lang(ar),
 [dir='rtl'] {
   font-family: var(--font-arabic);
   line-height: var(--leading-ar);
+}
+/* Letter-spacing and uppercase break Arabic joining: never apply them to Arabic. */
+:lang(ar) .s-badge,
+:lang(ar) .s-table th,
+:lang(ar) .s-table td::before,
+[dir='rtl'] .s-badge,
+[dir='rtl'] .s-table th,
+[dir='rtl'] .s-table td::before {
+  letter-spacing: 0;
+  text-transform: none;
 }
 .visually-hidden {
   position: absolute;
@@ -95,7 +105,6 @@ a {
   display: grid;
   gap: var(--space-1);
   margin-bottom: var(--space-4);
-  max-width: var(--form-max);
 }
 .s-field__label {
   font-weight: var(--weight-medium);
@@ -124,7 +133,8 @@ a {
 }
 .s-input[aria-invalid='true'] {
   border-color: var(--color-danger);
-  border-width: var(--border-width-strong);
+  /* a second pixel of edge without shifting the layout: not colour alone */
+  box-shadow: inset 0 0 0 var(--border-width) var(--color-danger);
 }
 
 /* Card */
@@ -239,6 +249,7 @@ a {
 }
 
 /* Table: becomes stacked cards when its container is narrower than 30rem (cells need data-label). */
+/* container-type needs a definite-width parent (a block, or a flex/grid item with min-width: 0). */
 .s-table-wrap {
   container-type: inline-size;
   overflow-x: auto;
@@ -304,17 +315,18 @@ a {
   .s-table tr:last-child {
     border-bottom: 0;
   }
+  /* The label floats to the start; the cell's content (any number of inline children) flows to the end. */
   .s-table td,
   .s-table td.s-num {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--space-4);
+    display: flow-root;
     padding: var(--space-1) 0;
     border: 0;
     text-align: end;
   }
   .s-table td::before {
     content: attr(data-label);
+    float: inline-start;
+    margin-inline-end: var(--space-4);
     color: var(--color-text-muted);
     font-family: var(--font-sans);
     font-size: var(--text-xs);
