@@ -73,6 +73,10 @@ and analysis, claims, scoring, deal room, agent, and pilot hardening.
 - **Ingress service** takes the GitHub webhook and scan results so the web app holds no service key (ADR 0009).
 - **Pilot membership** is added by staff (runbook); self-serve invites are `TEAM-INVITES`.
 - **Repository is public;** confidential docs live in git-ignored `docs/private/` (owner, 2026-10-17; ADR 0007).
+- **Design system approved** (owner, 2026-10-18): IBM Plex (Latin, Arabic, Mono, self-hosted), Sanad green
+  accent, blue = verified, amber = risk / founder claim, red = red flag; status always word + glyph; borders,
+  not shadows; mobile-first with breakpoints 30/48/64rem and 44px touch targets. The design-system page is
+  the reference; `packages/design-tokens` and `packages/ui` implement it.
 - **Sign-ups are closed.** Sign-in never creates an account; staff create members (runbook add-fund).
   Personal data moves up a tier, so this follows the security review rather than the earlier
   "sign in once" runbook (agent, Tier A from CLAUDE.md; 2026-10-17).

@@ -5,3 +5,5 @@ export { Badge, type BadgeTone } from './badge.tsx';
 export { EmptyState } from './empty-state.tsx';
 export { Table } from './table.tsx';
 export { Notice } from './notice.tsx';
+export { FindingBadge, type FindingType } from './finding-badge.tsx';
+export { SourceTier, type Tier } from './source-tier.tsx';
