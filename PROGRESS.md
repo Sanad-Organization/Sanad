@@ -5,8 +5,16 @@
 > Session precisely. Write it as if a customer will read it: no credentials, no infrastructure
 > identifiers, no real company, founder or fund names.
 
-**Last updated:** 2026-10-17 (evening)
-**Latest (2026-10-17, app shell + worker core):** Two PRs are ready for review, each on its own branch
+**Last updated:** 2026-10-18
+**Latest (2026-10-18, DB hardening + both slice 2s):** Slice 1 of APP-SHELL and of WORKER-CORE is merged.
+Three PRs are ready for review, each its own branch against `main`, none stacked:
+#5 `fix/db-reaper-fk-indexes` (database only): the lease reaper truncates `last_error`, 30 covering indexes
+(DB-FK-INDEXES) and a catalogue test that fails CI for any future foreign key without one.
+#6 `feat/app-shell-deals` (APP-SHELL slice 2): `/deals` list and `/deals/new` → `create_deal`, flag-gated.
+#7 `feat/worker-ingress` (WORKER-CORE slice 2): ingress skeleton and `render.yaml` (worker, ingress, minute
+sweep, daily reconcile). Each passed the gate and a code-reviewer + security-review pass; the findings are
+fixed. Nothing hosted was touched. The confidential docs were not available this session; no task needed them.
+**Earlier (2026-10-17, app shell + worker core):** Two PRs are ready for review, each on its own branch
 against `main`. `feat/app-shell` (APP-SHELL slice 1) adds the web app with email-link and Google sign-in,
 fund switcher, flag-gated `/deals`, server-side flags that fail closed, JSON logs with a trace id, server-only
 Sentry and `/api/health`. `feat/worker-core` (WORKER-CORE slice 1) adds the Python worker: job store, handler
@@ -44,21 +52,22 @@ and analysis, claims, scoring, deal room, agent, and pilot hardening.
 | --- | --- | --- |
 | HARNESS | ✅ Done | On main; CI green; ruleset, CODEOWNERS and production environment set (owner, 2026-10-17) |
 | DB-SPINE | ✅ Done | Live on the hosted project; schema verified against the local test database |
-| APP-SHELL | 🔄 Slice 1 in review | `feat/app-shell`; slice 2 (deals list, new deal) after merge |
-| WORKER-CORE | 🔄 Slice 1 in review | `feat/worker-core`; slice 2 (ingress skeleton, Render crons) after merge |
+| APP-SHELL | 🔄 Slice 2 in review | Slice 1 merged (#3); slice 2 = #6 (deals list, new deal). Done when #6 merges |
+| WORKER-CORE | 🔄 Slice 2 in review | Slice 1 merged (#4); slice 2 = #7 (ingress skeleton, `render.yaml`). Done when #7 merges |
+| DB-FK-INDEXES | ✅ Merged (#5) | With the reaper fix; owner approves the `migrate` run, then re-checks the advisor |
 | Day-0 accounts | ⏳ Partly done | Vercel project and PostHog flags created; rest per `docs/runbooks/day0-accounts.md` |
 | Everything else | ⏳ Queued | See BACKLOG |
 
 ## What Was Built Last Session
 
-- `supabase/migrations/20261013090000…090400`: tenancy (`app_auth`, funds, memberships, staff, audit_log),
-  jobs queue (`app_jobs`), deals and evidence, repo scans, social.
-- `supabase/tests/`: one test per migration, `zz_catalogue_sweep.test.sql`, `support/local_stub.sql`
-  (Supabase-like roles and default grants on plain Postgres) and `support/fixtures.sql` (synthetic funds A and B).
-- `scripts/db-test.sh` and `scripts/db-canaries.sh`. **Verified:** `db-test.sh` → 6/6 test files ok;
-  `db-canaries.sh` → 16/16 caught. After restoring, all tests pass again.
-- Docs: `CLAUDE.md`, `BACKLOG.md`, `docs/adr/0001–0009`, `specs/` (15), `docs/runbooks/` (7).
-- Harness: see the HARNESS spec; guard tests run with `node --test`.
+- **#5 (database):** migration `20261018090000_reaper_truncate_fk_indexes.sql` + its test + one canary.
+  Verified locally on Postgres 16 + pgvector: `db-test.sh` 7/7 test files ok, `db-canaries.sh` 17/17 caught;
+  the old `jobs_claim` reproduces the CHECK failure, the new one passes. CI green.
+- **#6 (web):** `/deals` (RLS read via `lib/deals.ts`), `/deals/new` (zod in `lib/deal-form.ts`, action
+  `createDeal`, fund pinned on the form), `dealCheckField` in `lib/errors.ts`, `ButtonLink` + `Textarea` in
+  `packages/ui`, unit tests, runbook smoke + alerts. Gate and `next build` green; CI green; Vercel preview built.
+- **#7 (services):** `services/ingress` (health, signature and scan-token helpers, streamed caps, generic
+  errors, JSON logs, scrubbed Sentry), `render.yaml`, gate steps, `docs/runbooks/ingress.md`. 45 tests.
 
 ## Decisions Made (must be remembered)
 
@@ -87,6 +96,14 @@ and analysis, claims, scoring, deal room, agent, and pilot hardening.
   The PostHog project is US-hosted; only those ids are sent.
 - **Hosted database:** a new Supabase project in the owner's own organisation, Frankfurt, separate from
   any other product's project (owner, 2026-10-17).
+- **DB-FK-INDEXES queued and built** with the reaper fix in one database PR (owner, 2026-10-18).
+- **A new deal is pinned to the fund the form showed;** a submit after switching funds in another tab is
+  refused (agent, Tier A: fund isolation moves up a tier; security review, 2026-10-18).
+- **The scan-upload secret is `SCAN_UPLOAD_SECRET`** everywhere, the name the secret guard and
+  `.env.example` know (agent, Tier A, 2026-10-18). Ingress refuses to start on secrets under 32 characters
+  or a webhook secret equal to the upload secret.
+- **PROGRESS/BACKLOG updates for parallel PRs go in one docs PR at the stop,** so feature PRs don't
+  conflict on these files (agent, 2026-10-18).
 
 ## Known Issues / TODOs
 
@@ -98,6 +115,8 @@ and analysis, claims, scoring, deal room, agent, and pilot hardening.
 - **HUMAN ONLY:** founder data agreement text; legal review of the social data rules (ADR 0004).
 - **HUMAN ONLY:** day-0 accounts (`docs/runbooks/day0-accounts.md`).
 - Confirm ADR 0002 (staff see no fund data) and ADR 0005 (untrusted content, erasure).
+- **Owner patch to `.github/workflows/ci.yml`:** add the `ingress` job (in the body of #7) next to the
+  `worker` job (in the body of #4); until then the gate runs them locally only.
 
 ### Carried
 
@@ -112,14 +131,14 @@ and analysis, claims, scoring, deal room, agent, and pilot hardening.
 - **Rate limiting / bot check on the sign-in action** (bootstrap §18.4); Supabase's limits apply meanwhile.
 - **Worker CI job:** `.github` changes are owner-applied; the patch adding the `worker` job (ruff, pytest,
   DB integration test) is in the PR description of `feat/worker-core`.
-- **SQL follow-up — done-in-review (#5):** the `jobs_claim` reaper truncates `last_error` with
+- **SQL follow-up — merged (#5):** the `jobs_claim` reaper truncates `last_error` with
   `left(…, 2000)` (migration `20261018090000`). Owner runs `migrate` after merge.
 - Sentry does not see job failures (they are handled); decide whether permanent failures should raise an
   event.
 
 - **Advisor results (2026-10-17), accepted:** security WARN ×9 = the nine reviewed user RPCs (by design,
   ADR 0002); INFO ×2 = `app_jobs` tables with RLS and no policies (by design, ADR 0006).
-- **DB-FK-INDEXES — done-in-review (#5):** 30 covering indexes, one per foreign key, plus a catalogue
+- **DB-FK-INDEXES — merged (#5):** 30 covering indexes, one per foreign key, plus a catalogue
   test so a future foreign key without an index fails CI (queued by the owner, 2026-10-18).
 
 - Whether any pilot fund needs in-region storage (not Frankfurt).
@@ -133,9 +152,17 @@ no separate DB-SPINE PR.
 
 ### 0. First thing next session
 
-1. Owner: open and merge the PRs for `feat/app-shell` and `feat/worker-core` (CI must be green).
-2. Owner: the hosted steps in `docs/runbooks/web-hosting.md` (Vercel ↔ GitHub, Supabase Auth: sign-ups
-   off, redirect URLs, magic-link template), then create your own member account (`add-fund.md`).
-3. Agent: APP-SHELL slice 2 (deals list, `/deals/new` → `create_deal`), then WORKER-CORE slice 2 (ingress
-   skeleton, Render crons), each from fresh `main`.
-4. Owner: remaining day-0 accounts (Render, Fly, GitHub App, X, Bright Data, model keys, Sentry).
+1. Owner: review and merge, each when CI is green: #6 (web; merged with the design system and using its
+   stacked Table, Badge and blockOnPhone Button), #7 (services), then this docs PR. #5 and the design system
+   (#9) are merged.
+2. Owner, after #5: approve the `migrate` run (production environment), then re-run Supabase Advisors →
+   Performance and expect 0 "Unindexed foreign keys".
+3. Owner, after #6: smoke per `docs/runbooks/web-hosting.md` with `app-shell` off (404), then turn it on
+   for your pilot fund only and create "Synthetic Co A".
+4. Owner, after #7: Render → New → Blueprint from `main`; set the values for the names in `render.yaml`;
+   keep `worker-kill` on until ready (steps in the #7 body).
+5. Owner: apply the CI patches for the `worker` and `ingress` jobs.
+6. Agent: mark APP-SHELL and WORKER-CORE `done` in BACKLOG once #6 and #7 are merged, then take
+   COLLECT-WEB (#5 in BACKLOG; depends on WORKER-CORE). If its spec needs the confidential architecture
+   plan for details the repo lacks, post DECISION NEEDED and ask for `docs/private/`.
+7. Owner: remaining day-0 accounts (Fly, GitHub App, X, Bright Data, model keys, Sentry).
