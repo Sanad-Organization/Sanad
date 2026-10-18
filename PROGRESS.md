@@ -78,6 +78,8 @@ and analysis, claims, scoring, deal room, agent, and pilot hardening.
   not shadows; mobile-first with breakpoints 30/48/64rem and 44px touch targets. The design system is kept as
   a private artifact in the owner's account (link in the Project, not in this public repo); `packages/design-tokens`
   (with its contrast test) and `packages/ui` implement it and are the source of truth in code.
+- **File uploads go straight to Storage** under one tested insert policy (own fund, own deal, no overwrite
+  or delete); ADR 0010 (owner chose option A, 2026-10-18).
 - **Sign-ups are closed.** Sign-in never creates an account; staff create members (runbook add-fund).
   Personal data moves up a tier, so this follows the security review rather than the earlier
   "sign in once" runbook (agent, Tier A from CLAUDE.md; 2026-10-17).

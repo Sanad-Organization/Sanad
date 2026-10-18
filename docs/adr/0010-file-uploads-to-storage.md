@@ -1,6 +1,6 @@
 # 0010 — File uploads: the one client write (amends ADR 0002)
 
-**Status:** proposed — 2026-10-18. Needs the owner's decision (fund isolation moves up a tier).
+**Status:** accepted — 2026-10-18 (owner chose A).
 
 ## Context
 
@@ -24,8 +24,7 @@ still lands in the same bucket.
 
 ## Decision
 
-[[OWNER: A or B]]. The agent recommends **A** for the MVP: it is equivalent in what a member can do, fully
-tested, and smaller. Downloads go through short-lived signed URLs minted server-side in either option.
+**A** (owner, 2026-10-18): it is equivalent in what a member can do, fully tested, and smaller. Downloads go through short-lived signed URLs minted server-side in either option.
 
 ## Consequences
 
