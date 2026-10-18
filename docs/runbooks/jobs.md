@@ -37,5 +37,7 @@ Never delete a dead letter (the database refuses). Resolve it with a note.
 
 - `python -m sanad_worker run` — the worker (Render background worker).
 - `python -m sanad_worker sweep` — enqueue `ops.sweep` (Render cron, every minute; deduped).
-- `python -m sanad_worker reconcile` — daily counts (Render cron); exits non-zero if the call fails.
+- `python -m sanad_worker reconcile` — daily counts (Render cron, 03:17 UTC); exits non-zero if the call fails.
 - `python -m sanad_worker once` — claim and run one batch (debugging).
+
+The services and crons are described in `render.yaml` (names of environment variables only).
