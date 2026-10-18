@@ -23,6 +23,7 @@ F2="$T/20261013090200_deals_evidence.test.sql"
 F3="$T/20261013090300_repo_scans.test.sql"
 F4="$T/20261013090400_social.test.sql"
 F5="$T/20261018090000_reaper_truncate_fk_indexes.test.sql"
+F6="$T/20261018120000_deal_files_storage.test.sql"
 FS="$T/zz_catalogue_sweep.test.sql"
 
 failures=0
@@ -41,6 +42,26 @@ canary() {  # name, break-sql, test-file, restore-sql
   fi
   "${PSQL[@]}" -c "$fix" >/dev/null 2>&1 || { echo "RESTORE FAILED for $name; database is now unsafe to reuse" >&2; exit 1; }
 }
+
+canary "deal-files read policy opened" \
+  "drop policy deal_files_member_read on storage.objects; create policy deal_files_member_read on storage.objects for select to authenticated using (bucket_id = 'deal-files')" "$F6" \
+  "drop policy deal_files_member_read on storage.objects; create policy deal_files_member_read on storage.objects for select to authenticated using (bucket_id = 'deal-files' and app_auth.can_read_deal_file(name))"
+
+canary "deal-files insert policy opened" \
+  "drop policy deal_files_member_insert on storage.objects; create policy deal_files_member_insert on storage.objects for insert to authenticated with check (bucket_id = 'deal-files')" "$F6" \
+  "drop policy deal_files_member_insert on storage.objects; create policy deal_files_member_insert on storage.objects for insert to authenticated with check (bucket_id = 'deal-files' and owner_id = (select auth.uid())::text and app_auth.can_upload_deal_file(name))"
+
+canary "deal-files delete policy added" \
+  "create policy deal_files_member_delete on storage.objects for delete to authenticated using (bucket_id = 'deal-files')" "$F6" \
+  "drop policy deal_files_member_delete on storage.objects"
+
+canary "register_file without its role check" \
+  "do \$\$ declare d text; begin select pg_get_functiondef('public.register_file(uuid,text,text,text)'::regprocedure) into d; execute replace(d, 'perform app_auth.require_role(v_fund, array[''owner'',''partner'',''analyst'']);', ''); end \$\$" "$F6" \
+  "do \$\$ declare d text; begin select pg_get_functiondef('public.register_file(uuid,text,text,text)'::regprocedure) into d; execute replace(d, 'v_parts := app_auth.deal_file_parts(p_path);', 'perform app_auth.require_role(v_fund, array[''owner'',''partner'',''analyst'']);' || chr(10) || '  v_parts := app_auth.deal_file_parts(p_path);'); end \$\$"
+
+canary "deal-files readable after erasure" \
+  "drop policy deal_files_member_read on storage.objects; create policy deal_files_member_read on storage.objects for select to authenticated using (bucket_id = 'deal-files' and (app_auth.deal_file_parts(name))[1] = any (app_auth.my_fund_ids()))" "$F6" \
+  "drop policy deal_files_member_read on storage.objects; create policy deal_files_member_read on storage.objects for select to authenticated using (bucket_id = 'deal-files' and app_auth.can_read_deal_file(name))"
 
 canary "RLS off on deals" \
   "alter table public.deals disable row level security" "$F2" \

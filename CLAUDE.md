@@ -82,7 +82,8 @@ docs/ specs/ .claude/ .github/ .githooks/
 ## Non-negotiable engineering rules
 
 **Data & tenancy** — every table carries `fund_id NOT NULL` + RLS + read-only member policy + paired
-isolation test + canary, in the same migration. **No insert/update/delete policies anywhere.** Browsers
+isolation test + canary, in the same migration. **No insert/update/delete policies anywhere**, except the one
+`deal-files` Storage upload policy (ADR 0010). Browsers
 never write tables: user actions go through the reviewed `SECURITY DEFINER` RPCs (whitelisted in
 `zz_catalogue_sweep.test.sql`); background writes go through the worker with the service role. Children
 reference parents by composite `(…, deal_id, fund_id)` keys. Helpers live in `app_auth`, are

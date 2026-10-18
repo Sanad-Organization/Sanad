@@ -8,12 +8,15 @@
 1. Confirm the request in writing (fund owner's email) and note the deal id and reason.
 2. If a repository connection is still active, wait for or trigger `github.revoke_expired` for it first
    (the worker removes Sanad's installation).
-3. Delete the deal's files: in Storage, bucket `deal-files`, folder `<fund_id>/<deal_id>/`.
-4. In the SQL editor: `select public.erase_deal('<deal id>', '<reason, max 200 chars>');` → `true`.
+3. In the SQL editor: `select public.erase_deal('<deal id>', '<reason, max 200 chars>');` → `true`.
+   From this moment nobody can read or upload the deal's files (the storage policies need the deal).
+4. Then delete the deal's files: in Storage, bucket `deal-files`, the whole folder `<fund_id>/<deal_id>/`
+   (registered or not). Order matters: erasing first closes the upload window.
 
 ## Verify
 
 - `select count(*) from public.sources where deal_id = '<deal id>'` → 0 (same for `mentions`, `agent_turns`).
+- Storage: the folder `deal-files/<fund_id>/<deal_id>/` is gone.
 - `audit_log` has one `deal.erased` row for the fund.
 - Langfuse: delete traces tagged with the deal id (retention 30 days otherwise).
 

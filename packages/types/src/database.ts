@@ -150,6 +150,10 @@ export type Database = {
         };
         Returns: string;
       };
+      register_file: {
+        Args: { p_deal: string; p_path: string; p_sha256: string; p_title?: string };
+        Returns: string;
+      };
     };
     Enums: {
       deal_status: 'screening' | 'diligence' | 'approved' | 'passed' | 'portfolio';
