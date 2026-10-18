@@ -54,7 +54,7 @@ and analysis, claims, scoring, deal room, agent, and pilot hardening.
 | DB-SPINE | ✅ Done | Live on the hosted project; schema verified against the local test database |
 | APP-SHELL | 🔄 Slice 2 in review | Slice 1 merged (#3); slice 2 = #6 (deals list, new deal). Done when #6 merges |
 | WORKER-CORE | 🔄 Slice 2 in review | Slice 1 merged (#4); slice 2 = #7 (ingress skeleton, `render.yaml`). Done when #7 merges |
-| DB-FK-INDEXES | 🔄 Done-in-review | #5 (with the reaper fix); owner runs `migrate` after merge |
+| DB-FK-INDEXES | ✅ Merged (#5) | With the reaper fix; owner approves the `migrate` run, then re-checks the advisor |
 | Day-0 accounts | ⏳ Partly done | Vercel project and PostHog flags created; rest per `docs/runbooks/day0-accounts.md` |
 | Everything else | ⏳ Queued | See BACKLOG |
 
@@ -131,14 +131,14 @@ and analysis, claims, scoring, deal room, agent, and pilot hardening.
 - **Rate limiting / bot check on the sign-in action** (bootstrap §18.4); Supabase's limits apply meanwhile.
 - **Worker CI job:** `.github` changes are owner-applied; the patch adding the `worker` job (ruff, pytest,
   DB integration test) is in the PR description of `feat/worker-core`.
-- **SQL follow-up — done-in-review (#5):** the `jobs_claim` reaper truncates `last_error` with
+- **SQL follow-up — merged (#5):** the `jobs_claim` reaper truncates `last_error` with
   `left(…, 2000)` (migration `20261018090000`). Owner runs `migrate` after merge.
 - Sentry does not see job failures (they are handled); decide whether permanent failures should raise an
   event.
 
 - **Advisor results (2026-10-17), accepted:** security WARN ×9 = the nine reviewed user RPCs (by design,
   ADR 0002); INFO ×2 = `app_jobs` tables with RLS and no policies (by design, ADR 0006).
-- **DB-FK-INDEXES — done-in-review (#5):** 30 covering indexes, one per foreign key, plus a catalogue
+- **DB-FK-INDEXES — merged (#5):** 30 covering indexes, one per foreign key, plus a catalogue
   test so a future foreign key without an index fails CI (queued by the owner, 2026-10-18).
 
 - Whether any pilot fund needs in-region storage (not Frankfurt).
@@ -152,8 +152,9 @@ no separate DB-SPINE PR.
 
 ### 0. First thing next session
 
-1. Owner: review and merge, in this order, each when CI is green: #5 (database), #6 (web), #7 (services),
-   then this docs PR.
+1. Owner: review and merge, each when CI is green: #6 (web; merged with the design system and using its
+   stacked Table, Badge and blockOnPhone Button), #7 (services), then this docs PR. #5 and the design system
+   (#9) are merged.
 2. Owner, after #5: approve the `migrate` run (production environment), then re-run Supabase Advisors →
    Performance and expect 0 "Unindexed foreign keys".
 3. Owner, after #6: smoke per `docs/runbooks/web-hosting.md` with `app-shell` off (404), then turn it on
