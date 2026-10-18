@@ -23,6 +23,14 @@ if (existsSync('services/worker/pyproject.toml')) {
   steps.push(['worker tests', 'uv', ['run', ...uv, 'pytest', 'services/worker/tests']]);
 }
 
+// Ingress: lint, format and unit tests.
+if (existsSync('services/ingress/pyproject.toml')) {
+  const uv = ['--project', 'services/ingress'];
+  steps.push(['ingress lint', 'uv', ['run', ...uv, 'ruff', 'check', 'services/ingress']]);
+  steps.push(['ingress format', 'uv', ['run', ...uv, 'ruff', 'format', '--check', 'services/ingress']]);
+  steps.push(['ingress tests', 'uv', ['run', ...uv, 'pytest', 'services/ingress/tests']]);
+}
+
 let dbChanged = process.argv.includes('--db');
 if (!dbChanged) {
   try {

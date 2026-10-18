@@ -1,0 +1,112 @@
+# Render Blueprint (WORKER-CORE slice 2). Frankfurt, next to the database (ADR 0001).
+# Environment variable NAMES only: every value is set by the owner in the Render
+# dashboard (`sync: false`), never in this file. ADR 0009 says which service may hold which key.
+# Plans are left to the owner (Render's default applies until chosen).
+#
+# Each service installs with uv from its own lockfile. The whole repository is checked
+# out, so the worker finds the job schemas in packages/types/schemas.
+
+services:
+  # Claims jobs from the Postgres queue and runs handlers.
+  - type: worker
+    name: sanad-worker
+    runtime: python
+    region: frankfurt
+    rootDir: services/worker
+    buildCommand: pip install uv==0.11.32 && uv sync --frozen --no-dev
+    startCommand: .venv/bin/python -m sanad_worker run
+    buildFilter:
+      paths: ['services/worker/**', 'packages/types/schemas/**']
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: POSTHOG_HOST
+        sync: false
+      - key: POSTHOG_PROJECT_KEY
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: SANAD_ENV
+        sync: false
+      - key: WORKER_SLOTS
+        sync: false
+      - key: WORKER_LEASE_SECONDS
+        sync: false
+
+  # GitHub App webhook + install callback, sandbox result uploads. The only HTTP entry
+  # holding the service-role key; verifies every signature.
+  - type: web
+    name: sanad-ingress
+    runtime: python
+    region: frankfurt
+    rootDir: services/ingress
+    buildCommand: pip install uv==0.11.32 && uv sync --frozen --no-dev
+    startCommand: .venv/bin/python -m sanad_ingress
+    healthCheckPath: /health
+    buildFilter:
+      paths: ['services/ingress/**']
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: GITHUB_WEBHOOK_SECRET
+        sync: false
+      - key: SCAN_UPLOAD_SECRET
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: SANAD_ENV
+        sync: false
+
+  # Every minute: enqueue ops.sweep (deduped, so overlapping runs never stack up).
+  - type: cron
+    name: sanad-sweep
+    runtime: python
+    region: frankfurt
+    rootDir: services/worker
+    schedule: '* * * * *'
+    buildCommand: pip install uv==0.11.32 && uv sync --frozen --no-dev
+    startCommand: .venv/bin/python -m sanad_worker sweep
+    buildFilter:
+      paths: ['services/worker/**', 'packages/types/schemas/**']
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: POSTHOG_HOST
+        sync: false
+      - key: POSTHOG_PROJECT_KEY
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: SANAD_ENV
+        sync: false
+
+  # Daily at 03:17 UTC: jobs_reconcile counts; logs jobs_reconcile_alarm at error level.
+  - type: cron
+    name: sanad-reconcile
+    runtime: python
+    region: frankfurt
+    rootDir: services/worker
+    schedule: '17 3 * * *'
+    buildCommand: pip install uv==0.11.32 && uv sync --frozen --no-dev
+    startCommand: .venv/bin/python -m sanad_worker reconcile
+    buildFilter:
+      paths: ['services/worker/**', 'packages/types/schemas/**']
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: POSTHOG_HOST
+        sync: false
+      - key: POSTHOG_PROJECT_KEY
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: SANAD_ENV
+        sync: false
