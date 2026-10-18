@@ -13,7 +13,9 @@
 --            RPC register_file(deal, path, sha256, title) turns an uploaded
 --            object into a tier-4 source and enqueues files.parse.
 -- Not here:  parsing (worker), erasing the stored objects of an erased deal
---            (worker job, COLLECT-WEB slice 2).
+--            (worker job, COLLECT-WEB slice 2; until then the erase runbook
+--            deletes the folder after erase_deal). Downloads: the deal room
+--            mints short-lived signed URLs server-side (COLLECT-WEB slice 2).
 -- Pre-check: none (new bucket and policies).
 -- Test:      supabase/tests/20261018120000_deal_files_storage.test.sql
 
@@ -36,9 +38,15 @@ begin
   return array[m[1]::uuid, m[2]::uuid];
 end $$;
 
+-- Readable only while the deal exists: after erase_deal, nobody reads its files
+-- even before the worker removes the objects.
 create function app_auth.can_read_deal_file(p_name text)
 returns boolean language sql stable security definer set search_path = '' as $$
-  select coalesce((app_auth.deal_file_parts(p_name))[1] = any (app_auth.my_fund_ids()), false)
+  select coalesce((
+    select p[1] = any (app_auth.my_fund_ids())
+       and exists (select 1 from public.deals d where d.id = p[2] and d.fund_id = p[1])
+      from (select app_auth.deal_file_parts(p_name) as p) x
+     where p is not null), false)
 $$;
 
 create function app_auth.can_upload_deal_file(p_name text)
@@ -58,16 +66,24 @@ grant execute on function app_auth.deal_file_parts(text), app_auth.can_read_deal
 
 create policy deal_files_member_read on storage.objects for select to authenticated
   using (bucket_id = 'deal-files' and app_auth.can_read_deal_file(name));
+-- owner_id is set by the Storage API from the JWT; checking it as well means a
+-- client can never attribute an upload to someone else.
 create policy deal_files_member_insert on storage.objects for insert to authenticated
-  with check (bucket_id = 'deal-files' and app_auth.can_upload_deal_file(name));
+  with check (bucket_id = 'deal-files' and owner_id = (select auth.uid())::text
+              and app_auth.can_upload_deal_file(name));
+
+-- One source per stored object.
+create unique index sources_deal_storage_path_key on public.sources (deal_id, storage_path)
+  where storage_path is not null;
 
 -- Uploaded object → source (tier 4: files a fund receives carry the founder's
 -- claims) → files.parse. The caller supplies the SHA-256 of the bytes; the
 -- worker recomputes it in files.parse and fails the job permanently on a
--- mismatch. Idempotent: the same bytes for the same deal return the same source.
+-- mismatch. Idempotent per object: registering the same path again returns the
+-- same source; the same bytes under a second path are refused (23505).
 create function public.register_file(p_deal uuid, p_path text, p_sha256 text, p_title text default null)
 returns uuid language plpgsql volatile security definer set search_path = '' as $$
-declare v_fund uuid; v_parts uuid[]; v_source uuid; v_storage text;
+declare v_fund uuid; v_parts uuid[]; v_source uuid; v_hash text; v_storage text; v_title text;
 begin
   select fund_id into v_fund from public.deals where id = p_deal;
   perform app_auth.require_role(v_fund, array['owner','partner','analyst']);
@@ -82,17 +98,29 @@ begin
   if not exists (select 1 from storage.objects o where o.bucket_id = 'deal-files' and o.name = p_path) then
     raise exception 'file not uploaded' using errcode = '22023';
   end if;
-
   v_storage := 'deal-files/' || p_path;
-  insert into public.sources (fund_id, deal_id, type, tier, title, storage_path, content_hash)
-  values (v_fund, p_deal, 'file', 4, nullif(left(btrim(coalesce(p_title, '')), 500), ''), v_storage, p_sha256)
-  on conflict (deal_id, content_hash) do nothing
-  returning id into v_source;
 
-  if v_source is null then
-    select s.id into v_source from public.sources s where s.deal_id = p_deal and s.content_hash = p_sha256;
+  select s.id, s.content_hash into v_source, v_hash from public.sources s
+   where s.deal_id = p_deal and s.storage_path = v_storage;
+  if v_source is not null then
+    if v_hash <> p_sha256 then
+      raise exception 'file already registered with another hash' using errcode = '22023';
+    end if;
     return v_source;
   end if;
+
+  -- Titles often come from file names, which the founder chose: strip control
+  -- and bidi characters so they can't spoof the deal room; keep the rest as data.
+  v_title := nullif(left(btrim(regexp_replace(coalesce(p_title, ''),
+               '[[:cntrl:]\u200e\u200f\u202a-\u202e\u2066-\u2069]', '', 'g')), 500), '');
+
+  begin
+    insert into public.sources (fund_id, deal_id, type, tier, title, storage_path, content_hash)
+    values (v_fund, p_deal, 'file', 4, v_title, v_storage, p_sha256)
+    returning id into v_source;
+  exception when unique_violation then
+    raise exception 'this file is already in the deal' using errcode = '23505';
+  end;
 
   perform app_jobs.enqueue('files.parse', jsonb_build_object('deal_id', p_deal, 'storage_path', v_storage),
                            v_fund, 'file:' || v_source);

@@ -34,7 +34,8 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000
 do $$ declare n int; begin
   select count(*) into n from storage.objects where name like '00000000-0000-0000-0000-00000000000a/%';
   if n <> 0 then raise exception 'CRITICAL: owner B sees % file(s) of fund A', n; end if;
-  raise notice 'PASS: owner B reads no fund A files';
+  perform test_helpers.expect_denied($q$insert into storage.objects (bucket_id, name, owner_id) values ('deal-files', '00000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-00000000d00a/88888888-8888-4888-8888-888888888888.pdf', '00000000-0000-0000-0000-0000000000b1')$q$, 'owner B upload to fund A');
+  raise notice 'PASS: owner B reads and writes no fund A files';
 end $$;
 reset role;
 
@@ -55,15 +56,18 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}', true);
 do $$ begin
   -- analyst A may upload under fund A / deal A
-  perform test_helpers.try($q$insert into storage.objects (bucket_id, name, owner) values ('deal-files', '00000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-00000000d00a/44444444-4444-4444-8444-444444444444.pdf', '00000000-0000-0000-0000-0000000000a2')$q$);
+  perform test_helpers.try($q$insert into storage.objects (bucket_id, name, owner, owner_id) values ('deal-files', '00000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-00000000d00a/44444444-4444-4444-8444-444444444444.pdf', '00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-0000000000a2')$q$);
   if not exists (select 1 from storage.objects where name like '%44444444-4444-4444-8444-444444444444.pdf') then
     raise exception 'FAIL: analyst A could not upload to own deal';
   end if;
-  -- …but not under fund B, nor fund A with fund B's deal, nor a bad name, nor another bucket
+  -- …but not under fund B, nor fund A with fund B's deal, nor a bad name, nor another bucket,
+  -- nor attributed to another user
   perform test_helpers.expect_denied($q$insert into storage.objects (bucket_id, name) values ('deal-files', '00000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-00000000d00b/55555555-5555-4555-8555-555555555555.pdf')$q$, 'analyst A upload to fund B');
   perform test_helpers.expect_denied($q$insert into storage.objects (bucket_id, name) values ('deal-files', '00000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-00000000d00b/55555555-5555-4555-8555-555555555555.pdf')$q$, 'analyst A upload with fund B deal');
   perform test_helpers.expect_denied($q$insert into storage.objects (bucket_id, name) values ('deal-files', '00000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-00000000d00a/../x.pdf')$q$, 'path traversal name');
-  perform test_helpers.expect_denied($q$insert into storage.objects (bucket_id, name) values ('deal-files', '00000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-00000000d00a/55555555-5555-4555-8555-555555555555.exe')$q$, 'disallowed extension');
+  perform test_helpers.expect_denied($q$insert into storage.objects (bucket_id, name, owner_id) values ('deal-files', '00000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-00000000d00a/55555555-5555-4555-8555-555555555555.exe', '00000000-0000-0000-0000-0000000000a2')$q$, 'disallowed extension');
+  perform test_helpers.expect_denied($q$insert into storage.objects (bucket_id, name, owner_id) values ('other-bucket', '00000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-00000000d00a/55555555-5555-4555-8555-555555555555.pdf', '00000000-0000-0000-0000-0000000000a2')$q$, 'another bucket');
+  perform test_helpers.expect_denied($q$insert into storage.objects (bucket_id, name, owner_id) values ('deal-files', '00000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-00000000d00a/55555555-5555-4555-8555-555555555555.pdf', '00000000-0000-0000-0000-0000000000a1')$q$, 'upload attributed to another user');
   -- no overwrite, no delete
   perform test_helpers.try($q$update storage.objects set name = name || 'x' where bucket_id = 'deal-files'$q$);
   perform test_helpers.try($q$delete from storage.objects where bucket_id = 'deal-files'$q$);
@@ -103,16 +107,26 @@ do $$ declare s1 uuid; s2 uuid; h text := repeat('ab', 32); n int; begin
     'file not uploaded', 'unknown object');
   perform test_helpers.expect_error($q$select public.register_file('00000000-0000-0000-0000-00000000d00a', '00000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-00000000d00a/11111111-1111-4111-8111-111111111111.pdf', 'nothex')$q$,
     'invalid sha256', 'bad hash');
+  perform test_helpers.expect_error($q$select public.register_file('00000000-0000-0000-0000-00000000d00a', '00000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-00000000d00a/11111111-1111-4111-8111-111111111111.pdf', repeat('cd', 32))$q$,
+    'another hash', 'same object, different hash');
+  perform test_helpers.expect_error($q$select public.register_file('00000000-0000-0000-0000-00000000d00a', '00000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-00000000d00a/44444444-4444-4444-8444-444444444444.pdf', repeat('ab', 32))$q$,
+    'already in the deal', 'same bytes under a second path');
+  perform public.register_file('00000000-0000-0000-0000-00000000d00a',
+    '00000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-00000000d00a/44444444-4444-4444-8444-444444444444.pdf', repeat('12', 32),
+    E'deck\u202e fdp.exe\n');
+  if exists (select 1 from public.sources where title ~ '[[:cntrl:]\u202e]') then
+    raise exception 'FAIL: control or bidi characters kept in a title';
+  end if;
   raise notice 'PASS: register_file rules';
 end $$;
 reset role;
 
--- files.parse queued exactly once
-do $$ declare n int; begin
-  select count(*) into n from app_jobs.jobs where kind = 'files.parse'
+-- files.parse queued exactly once per registered object (two objects registered above)
+do $$ declare n int; m int; begin
+  select count(*), count(distinct payload ->> 'storage_path') into n, m from app_jobs.jobs where kind = 'files.parse'
      and payload ->> 'deal_id' = '00000000-0000-0000-0000-00000000d00a';
-  if n <> 1 then raise exception 'FAIL: % files.parse job(s), expected 1', n; end if;
-  raise notice 'PASS: files.parse enqueued once';
+  if n <> 2 or m <> 2 then raise exception 'FAIL: % files.parse job(s) for % object(s), expected 2 for 2', n, m; end if;
+  raise notice 'PASS: files.parse enqueued once per object';
 end $$;
 
 set local role authenticated;
@@ -121,6 +135,28 @@ do $$ begin
   perform test_helpers.expect_error($q$select public.register_file('00000000-0000-0000-0000-00000000d00a', '00000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-00000000d00a/11111111-1111-4111-8111-111111111111.pdf', repeat('ef', 32))$q$,
     'not allowed', 'viewer register_file', 'CRITICAL');
   raise notice 'PASS: viewers cannot register files';
+end $$;
+reset role;
+
+-- ---- Service role sees every fund (positive control) ---------------------------
+set local role service_role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+do $$ declare n int; begin
+  select count(*) into n from storage.objects where bucket_id = 'deal-files';
+  if n < 3 then raise exception 'FAIL: service role sees % objects, expected all', n; end if;
+  raise notice 'PASS: service role reads every fund (control)';
+end $$;
+reset role;
+
+-- ---- After erasure, nobody reads the deal's files --------------------------------
+select public.erase_deal('00000000-0000-0000-0000-00000000d00a', 'test');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}', true);
+do $$ declare n int; begin
+  select count(*) into n from storage.objects where name like '%/00000000-0000-0000-0000-00000000d00a/%';
+  if n <> 0 then raise exception 'CRITICAL: owner A still reads % file(s) of an erased deal', n; end if;
+  perform test_helpers.expect_denied($q$insert into storage.objects (bucket_id, name, owner_id) values ('deal-files', '00000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-00000000d00a/99999999-9999-4999-8999-999999999999.pdf', '00000000-0000-0000-0000-0000000000a1')$q$, 'upload to an erased deal');
+  raise notice 'PASS: erased deal files are unreadable and closed to uploads';
 end $$;
 reset role;
 

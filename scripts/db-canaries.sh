@@ -49,15 +49,19 @@ canary "deal-files read policy opened" \
 
 canary "deal-files insert policy opened" \
   "drop policy deal_files_member_insert on storage.objects; create policy deal_files_member_insert on storage.objects for insert to authenticated with check (bucket_id = 'deal-files')" "$F6" \
-  "drop policy deal_files_member_insert on storage.objects; create policy deal_files_member_insert on storage.objects for insert to authenticated with check (bucket_id = 'deal-files' and app_auth.can_upload_deal_file(name))"
+  "drop policy deal_files_member_insert on storage.objects; create policy deal_files_member_insert on storage.objects for insert to authenticated with check (bucket_id = 'deal-files' and owner_id = (select auth.uid())::text and app_auth.can_upload_deal_file(name))"
 
 canary "deal-files delete policy added" \
   "create policy deal_files_member_delete on storage.objects for delete to authenticated using (bucket_id = 'deal-files')" "$F6" \
   "drop policy deal_files_member_delete on storage.objects"
 
-canary "register_file role check removed" \
-  "create or replace function app_auth.require_role(p_fund uuid, p_roles text[]) returns void language plpgsql stable security definer set search_path = '' as \$\$ begin return; end \$\$" "$F6" \
-  "create or replace function app_auth.require_role(p_fund uuid, p_roles text[]) returns void language plpgsql stable security definer set search_path = '' as \$\$ begin if auth.uid() is null or not app_auth.has_role(p_fund, p_roles) then raise exception 'not allowed' using errcode = '42501'; end if; end \$\$"
+canary "register_file without its role check" \
+  "do \$\$ declare d text; begin select pg_get_functiondef('public.register_file(uuid,text,text,text)'::regprocedure) into d; execute replace(d, 'perform app_auth.require_role(v_fund, array[''owner'',''partner'',''analyst'']);', ''); end \$\$" "$F6" \
+  "do \$\$ declare d text; begin select pg_get_functiondef('public.register_file(uuid,text,text,text)'::regprocedure) into d; execute replace(d, 'v_parts := app_auth.deal_file_parts(p_path);', 'perform app_auth.require_role(v_fund, array[''owner'',''partner'',''analyst'']);' || chr(10) || '  v_parts := app_auth.deal_file_parts(p_path);'); end \$\$"
+
+canary "deal-files readable after erasure" \
+  "drop policy deal_files_member_read on storage.objects; create policy deal_files_member_read on storage.objects for select to authenticated using (bucket_id = 'deal-files' and (app_auth.deal_file_parts(name))[1] = any (app_auth.my_fund_ids()))" "$F6" \
+  "drop policy deal_files_member_read on storage.objects; create policy deal_files_member_read on storage.objects for select to authenticated using (bucket_id = 'deal-files' and app_auth.can_read_deal_file(name))"
 
 canary "RLS off on deals" \
   "alter table public.deals disable row level security" "$F2" \
