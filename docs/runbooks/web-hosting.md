@@ -39,6 +39,11 @@
 - `GET /api/health` → `200 {"status":"ok","sha":"<commit>"}`.
 - `/deals` signed out → redirect to `/login`.
 - Sign in as a pilot member → `/deals` shows the fund (flag on) or 404 (flag off).
+- Flag on, as an analyst: `/deals/new` → create "Synthetic Co A" with no optional fields → back on
+  `/deals` with the new row. Submit an invalid country (`UAE`) → field error, nothing created.
+- Flag on, as a viewer: `/deals/new` shows "Viewers can see deals but not create them".
+- Flag off: `/deals` and `/deals/new` → 404; a form left open submits → "This isn't available to your
+  fund yet." and no row.
 
 ## Alerts (log events)
 
@@ -48,3 +53,5 @@
 | `proxy.auth_degraded` | notify if > 20 in 5 min (Supabase Auth slow or down) |
 | `feature_off` with `outcome` `timeout` or `error` | notify if > 10 in 5 min (PostHog unreachable: flags fail closed) |
 | `session.memberships_failed` | page on any (members can't load their funds) |
+| `deals.list_failed` | page if > 3 in 5 min (members can't see their deals) |
+| `action.end` with `action=deal.create` and `outcome=error` | notify if > 3 in 10 min (deal creation failing) |

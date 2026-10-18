@@ -67,6 +67,15 @@
 .page-head .page-title {
   margin: 0;
 }
+/* Holds the section's main Button; full width on phones so blockOnPhone can fill it. */
+.page-action {
+  flex: 1 1 100%;
+}
+@media (min-width: 30rem) {
+  .page-action {
+    flex: 0 0 auto;
+  }
+}
 .auth-main {
   max-width: var(--form-max);
   margin: var(--space-8) auto;
@@ -88,4 +97,7 @@
   .auth-main {
     margin-top: var(--space-12);
   }
+}
+.form-column {
+  max-width: var(--form-max);
 }

@@ -131,6 +131,11 @@ a {
   color: var(--color-text);
   font: inherit;
 }
+.s-input--multiline {
+  min-height: calc(var(--control-height) * 3);
+  padding: var(--space-2) var(--space-3);
+  resize: vertical;
+}
 .s-input[aria-invalid='true'] {
   border-color: var(--color-danger);
   /* a second pixel of edge without shifting the layout: not colour alone */
